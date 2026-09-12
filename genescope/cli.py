@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import typer
@@ -53,14 +54,41 @@ def embed_command(
         help="CSV output path.",
     ),
     batch_size: int = typer.Option(8, min=1),
-    max_length: int = typer.Option(512, min=8),
+    max_length: int = typer.Option(
+        1000,
+        min=8,
+        help="Maximum tokenizer tokens, not nucleotide bases.",
+    ),
+    revision: str | None = typer.Option(
+        None,
+        help="Optional Hugging Face model revision/commit for reproducible inference.",
+    ),
 ) -> None:
     """Generate one foundation-model embedding per FASTA record."""
 
-    records = read_fasta(fasta)
-    backend = get_model(model, batch_size=batch_size, max_length=max_length)
-    matrix = backend.embed([record.sequence for record in records])
-    saved = save_embeddings(records, matrix, output)
+    try:
+        records = read_fasta(fasta)
+        backend = get_model(
+            model,
+            batch_size=batch_size,
+            max_length=max_length,
+            revision=revision,
+        )
+        matrix = backend.embed([record.sequence for record in records])
+        saved = save_embeddings(records, matrix, output)
+    except (ValueError, OSError, ImportError) as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(1) from exc
+
+    provenance = getattr(backend, "provenance", None)
+    if callable(provenance):
+        provenance_path = saved.with_suffix(saved.suffix + ".provenance.json")
+        provenance_path.write_text(
+            json.dumps(provenance(), indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        typer.echo(f"Provenance: {provenance_path}")
+
     typer.echo(
         f"Saved {matrix.shape[0]} sequence embeddings ({matrix.shape[1]} dimensions) to {saved}"
     )
