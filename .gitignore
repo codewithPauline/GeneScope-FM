@@ -8,4 +8,6 @@ venv/
 dist/
 build/
 *.csv
+!examples/synthetic/*.csv
+!docs/demo/*.csv
 .DS_Store

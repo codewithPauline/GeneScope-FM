@@ -6,9 +6,11 @@ from pathlib import Path
 
 import typer
 
+from .baselines import kmer_frequencies
 from .embeddings import save_embeddings
 from .io import read_fasta
 from .models import available_models, get_model
+from .report import explore_embeddings
 
 app = typer.Typer(
     help="GeneScope: explore genomic foundation-model representations of DNA.",
@@ -60,8 +62,65 @@ def embed_command(
     matrix = backend.embed([record.sequence for record in records])
     saved = save_embeddings(records, matrix, output)
     typer.echo(
-        f"Saved {matrix.shape[0]} sequence embeddings "
-        f"({matrix.shape[1]} dimensions) to {saved}"
+        f"Saved {matrix.shape[0]} sequence embeddings ({matrix.shape[1]} dimensions) to {saved}"
+    )
+
+
+@app.command("baseline")
+def baseline_command(
+    fasta: Path,
+    output: Path = typer.Option(Path("kmer_embeddings.csv"), "--output", "-o"),
+    k: int = typer.Option(3, min=1, max=6),
+) -> None:
+    """Export conventional k-mer frequencies (offline; not foundation-model embeddings)."""
+    try:
+        records = read_fasta(fasta)
+        matrix = kmer_frequencies([record.sequence for record in records], k)
+        saved = save_embeddings(records, matrix, output)
+    except (ValueError, OSError) as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(1) from exc
+    typer.echo(
+        f"Saved {len(records)} k-mer baseline vectors ({matrix.shape[1]} features) to {saved}"
+    )
+    typer.echo("Conventional sequence features; no foundation model was used.")
+
+
+@app.command("explore")
+def explore_command(
+    embeddings: Path,
+    output: Path = typer.Option(Path("genescope_report"), "--output", "-o"),
+    metadata: Path | None = typer.Option(None, help="CSV with sequence_id and label columns."),
+    neighbors: int = typer.Option(5, min=1, help="Clipped to n_sequences - 1 if needed."),
+    method: str = typer.Option("pca", help="pca or umap; UMAP needs the explore extra."),
+    seed: int = typer.Option(42, min=0, max=2**32 - 1),
+    umap_neighbors: int = typer.Option(15, min=2),
+    min_dist: float = typer.Option(0.1, min=0, max=1),
+    overwrite: bool = typer.Option(False, help="Replace generated report files in the directory."),
+    description: str | None = typer.Option(
+        None, help="Dataset/representation context for the report."
+    ),
+) -> None:
+    """Explore exported embeddings and write a portable HTML report plus CSV results."""
+    try:
+        report = explore_embeddings(
+            embeddings,
+            output,
+            metadata=metadata,
+            neighbors=neighbors,
+            method=method,
+            random_state=seed,
+            umap_neighbors=umap_neighbors,
+            min_dist=min_dist,
+            overwrite=overwrite,
+            description=description,
+        )
+    except (ValueError, OSError, ImportError) as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(1) from exc
+    typer.echo(f"Report: {report}")
+    typer.echo(
+        "Saved projection, PCA, cosine similarities, neighbors, and reproducibility summary."
     )
 
 

@@ -1,214 +1,176 @@
-# GeneScope
+# GeneScope-FM
 
 > **See what foundation models see in DNA.**
 
-**GeneScope-FM** is an open-source AI-for-biology framework for exploring, benchmarking, predicting, and interpreting DNA sequences with genomic foundation models.
+[![CI](https://github.com/codewithPauline/GeneScope-FM/actions/workflows/ci.yml/badge.svg)](https://github.com/codewithPauline/GeneScope-FM/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-0f766e.svg)](LICENSE)
+![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-2563eb.svg)
 
-GeneScope is built around a simple question:
+**GeneScope-FM is an open-source AI-for-biology framework for inspecting how genomic
+foundation models represent DNA.** It turns sequence embeddings into reproducible
+maps, similarity comparisons, and nearest-neighbor analyses—so researchers can
+investigate what a representation captures before building predictions on top of it.
 
-> **What biological information is encoded inside a genomic foundation model's representation of DNA?**
+The central question: **what biological information is encoded inside a genomic
+foundation model's representation of DNA?**
 
-Rather than treating foundation models as black-box predictors, GeneScope turns their sequence representations into objects researchers can inspect, compare, visualize, and evaluate.
+The current **v0.2 exploration milestone** provides a working analysis workflow,
+an offline baseline, and portable reports. Foundation-model checkpoint validation,
+supervised prediction, attribution, and multi-model benchmarking remain in development.
 
-## Why GeneScope?
+![GeneScope analysis preview showing a synthetic DNA k-mer example](docs/assets/explorer-demo.svg)
 
-Traditional sequence analysis often begins with hand-designed features such as GC content, k-mer frequencies, motif counts, alignments, or variant summaries. Genomic foundation models instead learn high-dimensional representations directly from sequence.
+*Analysis preview from 24 synthetic DNA sequences using conventional 3-mer frequencies.
+The deliberately different nucleotide compositions illustrate the workflow;
+this is not a foundation-model result or a biological benchmark.*
 
-GeneScope provides the research layer for interrogating those learned representations.
-
-```text
-DNA / FASTA
-    |
-    v
-Genomic foundation model
-    |
-    v
-Sequence embeddings
-    |
-    +--> Explore representation space
-    +--> Compare models
-    +--> Train downstream predictors
-    +--> Explain predictions
-    +--> Benchmark accuracy, calibration and compute
-```
-
-## Project goals
-
-GeneScope is being developed to support five core capabilities:
-
-1. **Embed** — convert DNA sequences into reusable foundation-model embeddings.
-2. **Explore** — inspect learned representation space with dimensionality reduction, similarity analysis and clustering.
-3. **Predict** — use embeddings for downstream biological classification and prediction tasks.
-4. **Explain** — identify sequence regions that influence model predictions.
-5. **Compare** — benchmark multiple genomic foundation models on the same biological problem.
-
-The long-term goal is model-agnostic biological sequence intelligence: one interface, multiple foundation-model backends.
-
-## Initial model architecture
-
-GeneScope uses a lightweight adapter layer so supported models can be switched without rewriting the analysis pipeline.
-
-```python
-from genescope.models import get_model
-
-model = get_model("nucleotide-transformer")
-embeddings = model.embed(["ACGTACGTACGT"])
-```
-
-The first release is structured to support Hugging Face-compatible genomic models, with planned adapters for:
-
-- Nucleotide Transformer
-- DNABERT-family models
-- HyenaDNA-style models
-- future biological sequence foundation models
-
-> Model support will be added only when the inference behavior has been tested and documented. GeneScope will not silently pretend incompatible models share identical tokenization or sequence-length behavior.
-
-## Installation
-
-Clone the repository and install the development package:
+## Try it in minutes
 
 ```bash
 git clone https://github.com/codewithPauline/GeneScope-FM.git
 cd GeneScope-FM
 pip install -e .
+
+genescope baseline examples/synthetic/sequences.fasta \
+  --k 3 --output kmer_embeddings.csv
+
+genescope explore kmer_embeddings.csv \
+  --metadata examples/synthetic/labels.csv \
+  --neighbors 3 --output my_report \
+  --description "Synthetic DNA; conventional 3-mer baseline; no foundation model used."
 ```
 
-For foundation-model inference:
+Open **`my_report/report.html`** in a browser. No GPU, model download, or server is
+needed for this demonstration. Hover over points to see their IDs and coordinates.
+
+Committed [example outputs](docs/demo/) include the report, input vectors, projection,
+neighbor table, similarity matrix, and reproducibility summary. To view the HTML
+from GitHub, download the repository and open it locally. See the
+[exploration guide](docs/exploration.md) for input requirements and analysis choices.
+
+## What works today
+
+| Capability | Current implementation |
+| --- | --- |
+| Validate DNA | FASTA ingestion; A/C/G/T/N validation; unique sequence IDs |
+| Analyze embeddings | Strict CSV loading with string IDs preserved |
+| Explore structure | Centered PCA; optional seeded UMAP |
+| Compare sequences | Cosine similarity and non-self nearest neighbors in the original dimensions |
+| Check representations | Numerical rank, constant features, duplicate vectors, zero-vector diagnostics |
+| Reproduce analyses | Input hashes, parameters, dependency versions, and exported tables |
+| Share results | Standalone HTML report with SVG plot and tooltips |
+| Establish a baseline | Normalized, overlapping, strand-specific k-mer frequencies |
+| Generate FM embeddings | Experimental Hugging Face adapter and Nucleotide Transformer registry entry; real checkpoint validation is pending |
+
+The exploration engine accepts embeddings from any source that follows the CSV
+schema. Metadata labels color the visualization; they never influence the fit.
+Neighbors are calculated from the full representation, independently of the plot.
+
+## Optional UMAP
+
+```bash
+pip install -e ".[explore]"
+genescope explore kmer_embeddings.csv \
+  --metadata examples/synthetic/labels.csv \
+  --method umap --umap-neighbors 8 --seed 42 --output umap_report
+```
+
+UMAP uses an explicit random seed and one worker. The report records its parameters
+and version. Reproducibility across different software versions is not guaranteed.
+PCA results are also exported for comparison.
+
+## Foundation-model inference: experimental
 
 ```bash
 pip install -e ".[ai]"
-```
-
-## CLI
-
-GeneScope exposes a command-line interface designed for biological workflows.
-
-```bash
 genescope models
-```
-
-Inspect FASTA input:
-
-```bash
 genescope inspect examples/sequences.fasta
 ```
 
-Generate embeddings:
+The repository contains a generic Hugging Face encoder with masked mean pooling
+and a registry entry for
+`InstaDeepAI/nucleotide-transformer-v2-50m-multi-species`. The intended interface is:
 
 ```bash
 genescope embed examples/sequences.fasta \
-  --model nucleotide-transformer \
-  --output embeddings.csv
+  --model nucleotide-transformer --output embeddings.csv
+genescope explore embeddings.csv --output model_report
 ```
 
-The current embedding command is wired to the model-adapter system. Foundation-model execution requires the optional AI dependencies and a compatible model backend.
+**This checkpoint has not yet passed end-to-end inference validation in GeneScope.**
+Model-specific loading, custom-code requirements, special-token pooling, and
+sequence-length handling need dedicated validation before scientific use. The
+current adapter truncates tokenized input at `--max-length` (default 512 tokens,
+not bases). The offline demo does not exercise this adapter. No other foundation
+model is advertised as supported yet.
 
 ## Python API
 
 ```python
-from genescope.io import read_fasta
-from genescope.models import get_model
+from genescope.embeddings import load_embeddings
+from genescope.explore import project_pca, nearest_neighbors
+from genescope.report import explore_embeddings
 
-records = read_fasta("examples/sequences.fasta")
-model = get_model("nucleotide-transformer")
+frame = load_embeddings("kmer_embeddings.csv")
+matrix = frame.filter(regex=r"^embedding_\d+$").to_numpy()
 
-matrix = model.embed([record.sequence for record in records])
-print(matrix.shape)
+pca = project_pca(matrix)
+neighbors = nearest_neighbors(matrix, frame.sequence_id.tolist(), k=3)
+report = explore_embeddings("kmer_embeddings.csv", "python_report", neighbors=3)
 ```
 
-## What GeneScope will benchmark
+## Scientific scope
 
-A serious foundation-model framework should answer more than "which model achieved the highest accuracy?" GeneScope is being designed to compare models across:
+GeneScope is organism-independent. Its long-term purpose is to test representations
+from human, plant, microbial, and other nucleotide sequences through a consistent
+analysis interface.
 
-- downstream predictive performance
-- biological clustering quality
-- nearest-neighbor structure
-- calibration and uncertainty
-- runtime
-- memory requirements
-- sequence-length constraints
-- robustness to sequence perturbation
-- interpretability
+One planned case study asks whether genomic foundation-model embeddings capture
+**evolutionary signal**, assessed against conventional genetic or evolutionary
+distances and appropriate controls. This direction complements the general framework.
 
-A major future workflow will compare learned embeddings against conventional biological representations such as k-mer features.
+An attractive projection is not validation. GC content, sequence length, repeats,
+shared ancestry, or leakage may explain visible structure. Cosine similarity is
+neither evolutionary distance nor evidence of shared function. The exploration
+command fits the supplied dataset for visualization; predictive evaluation will
+require separate training and held-out data.
 
-## Scientific direction
+Current dense reports support up to 5,000 sequences and have quadratic similarity
+cost. Numerical diagnostics describe the representation; they do not establish
+biological accuracy. Details are in the [methods and limitations guide](docs/exploration.md).
 
-GeneScope is intentionally organism-independent. Human, plant, microbial, vertebrate, and other nucleotide sequences can share the same interface.
+## Roadmap
 
-One flagship research direction will ask whether genomic foundation-model embeddings contain **evolutionary signal**: whether learned sequence representations recover meaningful biological relationships that can be compared with conventional genetic or evolutionary distances.
+| Stage | Status and scope |
+| --- | --- |
+| v0.1 · Foundation | FASTA reader, Python API, CLI, registry, experimental HF adapter, CSV export |
+| v0.2 · Explore | PCA, optional UMAP, similarities, neighbors, diagnostics, reports, offline baseline |
+| Next · Validate inference | Checkpoint-specific integration, explicit length handling, pooling checks, model provenance, real-sequence smoke test |
+| v0.3 · Predict | Leakage-aware data splits, downstream classifiers, k-mer comparisons, calibration |
+| v0.4 · Explain | Sequence attribution and perturbation analysis with model-specific validation |
+| v0.5 · Compare | Multi-model benchmarks, runtime and memory measurements, standardized reports |
 
-That case study will complement, rather than define, the framework.
+See [CHANGELOG.md](CHANGELOG.md) for implemented changes. The k-mer baseline was
+brought forward to make exploration runnable and establish a future comparison.
 
-## Repository structure
+## Development
 
-```text
-GeneScope-FM/
-├── genescope/
-│   ├── cli.py
-│   ├── io.py
-│   ├── embeddings.py
-│   └── models/
-│       ├── base.py
-│       ├── hf.py
-│       └── registry.py
-├── examples/
-├── tests/
-├── .github/workflows/
-├── pyproject.toml
-└── README.md
+```bash
+pip install -e ".[dev,explore]"
+ruff check genescope tests examples
+ruff format --check genescope tests examples
+pytest
 ```
 
-## Development roadmap
+CI runs the core suite on Python 3.10, 3.11, and 3.12, exercises the offline workflow,
+builds a wheel, and tests the optional UMAP dependency in a separate job. Numerical
+tests cover known PCA and cosine results, metadata alignment, malformed inputs,
+neighbor ties, reproducibility, and report handling. Model weights are not downloaded
+by the core tests.
 
-**v0.1 — Foundation**
-
-- FASTA ingestion and validation
-- clean Python API
-- CLI
-- model registry
-- Hugging Face adapter
-- embedding export
-- unit tests and CI
-
-**v0.2 — Explore**
-
-- PCA and UMAP
-- similarity matrices
-- nearest-neighbor search
-- representation-quality metrics
-
-**v0.3 — Predict**
-
-- downstream classifiers
-- train/validation/test evaluation
-- k-mer baselines
-- calibration metrics
-
-**v0.4 — Explain**
-
-- sequence attribution
-- Integrated Gradients / saliency backends
-- sequence-level visualization
-
-**v0.5 — Compare**
-
-- multi-model benchmarking
-- runtime and memory profiling
-- standardized benchmark reports
-
-## Philosophy
-
-GeneScope is not meant to be a thin wrapper around pretrained models. The project is centered on **evaluation, biological interpretation, reproducibility, and transparent model comparison**.
-
-If a foundation model learns a useful representation of DNA, GeneScope should help us measure what it learned, where it works, where it fails, and why.
-
-## Author
+## Author and license
 
 **Pauline Owusu-Ansah**  
 Ph.D. researcher in computational and evolutionary biology.
 
-## License
-
-Released under the MIT License. See `LICENSE`.
+Released under the [MIT License](LICENSE).
