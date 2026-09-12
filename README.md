@@ -2,7 +2,7 @@
 
 > **See what foundation models see in DNA.**
 
-[![CI](https://github.com/codewithPauline/GeneScope-FM/actions/workflows/ci.yml/badge.svg)](https://github.com/codewithPauline/GeneScope-FM/actions/workflows/ci.yml)
+[![CI on main](https://github.com/codewithPauline/GeneScope-FM/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/codewithPauline/GeneScope-FM/actions/workflows/ci.yml?query=branch%3Amain+event%3Apush)
 [![License: MIT](https://img.shields.io/badge/License-MIT-0f766e.svg)](LICENSE)
 ![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-2563eb.svg)
 
