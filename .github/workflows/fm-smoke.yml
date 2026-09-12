@@ -1,0 +1,46 @@
+name: Foundation model smoke test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  nucleotide-transformer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      HF_HUB_DISABLE_TELEMETRY: "1"
+      TOKENIZERS_PARALLELISM: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install GeneScope AI dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[ai]"
+      - name: Run Nucleotide Transformer embedding smoke test
+        run: |
+          genescope embed examples/sequences.fasta \
+            --model nucleotide-transformer \
+            --batch-size 2 \
+            --max-length 128 \
+            --output /tmp/nt_embeddings.csv
+          python - <<'PY'
+          import json
+          import pandas as pd
+
+          frame = pd.read_csv("/tmp/nt_embeddings.csv")
+          assert len(frame) == 3
+          assert len([column for column in frame if column.startswith("embedding_")]) == 512
+
+          with open("/tmp/nt_embeddings.csv.provenance.json", encoding="utf-8") as handle:
+              provenance = json.load(handle)
+          assert provenance["backend"] == "nucleotide-transformer-v2"
+          assert provenance["pooling"] == "masked-mean-final-hidden-state"
+          print(provenance)
+          PY
