@@ -54,7 +54,9 @@ class NucleotideTransformerSequenceModel(SequenceModel):
         self.model.eval()
 
         tokenizer_limit = int(self.tokenizer.model_max_length)
-        self.max_length = tokenizer_limit if max_length is None else min(max_length, tokenizer_limit)
+        self.max_length = (
+            tokenizer_limit if max_length is None else min(max_length, tokenizer_limit)
+        )
         if self.max_length < 2:
             raise ValueError("max_length must be at least 2 tokenizer tokens.")
 
