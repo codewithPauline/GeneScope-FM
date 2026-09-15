@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .hf import HuggingFaceSequenceModel
-from .nucleotide_transformer import NucleotideTransformerSequenceModel
+from .nucleotide_transformer import MODEL_ID, REVISION, NucleotideTransformerSequenceModel
 
 
 @dataclass(frozen=True)
@@ -15,17 +15,16 @@ class ModelSpec:
     model_id: str
     notes: str
     adapter: str = "huggingface"
+    revision: str | None = None
 
 
 _MODELS: dict[str, ModelSpec] = {
     "nucleotide-transformer": ModelSpec(
         key="nucleotide-transformer",
         display_name="Nucleotide Transformer v2 50M multi-species",
-        model_id="InstaDeepAI/nucleotide-transformer-v2-50m-multi-species",
-        notes=(
-            "Dedicated adapter using the checkpoint's masked-LM architecture, "
-            "remote model code, final hidden states, and masked mean pooling."
-        ),
+        model_id=MODEL_ID,
+        notes="Pinned 50M masked-LM checkpoint; custom code requires explicit opt-in.",
+        revision=REVISION,
         adapter="nucleotide-transformer-v2",
     ),
 }
@@ -44,15 +43,8 @@ def get_model(name: str, **kwargs):
         options = ", ".join(sorted(_MODELS))
         raise ValueError(f"Unknown model '{name}'. Available models: {options}") from exc
 
+    if kwargs.get("revision") is None:
+        kwargs["revision"] = spec.revision
     if spec.adapter == "nucleotide-transformer-v2":
-        return NucleotideTransformerSequenceModel(
-            name=spec.key,
-            model_id=spec.model_id,
-            **kwargs,
-        )
-
-    return HuggingFaceSequenceModel(
-        name=spec.key,
-        model_id=spec.model_id,
-        **kwargs,
-    )
+        return NucleotideTransformerSequenceModel(name=spec.key, model_id=spec.model_id, **kwargs)
+    return HuggingFaceSequenceModel(name=spec.key, model_id=spec.model_id, **kwargs)

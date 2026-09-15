@@ -45,3 +45,21 @@ jobs:
         run: pip install -e ".[dev,explore]"
       - name: Test UMAP with real dependency
         run: pytest tests/test_explore.py -k umap
+
+  inference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      OMP_NUM_THREADS: "2"
+      MKL_NUM_THREADS: "2"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install CPU inference dependencies
+        run: |
+          pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+          pip install -e ".[dev,ai]"
+      - name: Test real local encoder and masked-LM inference
+        run: pytest tests/test_hf.py tests/test_model_registry.py tests/test_provenance.py

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "genescope-fm"
-version = "0.2.0"
+version = "0.2.1"
 description = "AI-for-biology framework for exploring and benchmarking genomic foundation-model representations."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -41,8 +41,8 @@ explore = [
   "umap-learn>=0.5.6,<0.6",
 ]
 ai = [
-  "torch>=2.2",
-  "transformers>=4.44",
+  "torch>=2.6,<3",
+  "transformers==4.48.3",
 ]
 dev = [
   "pytest>=8.0",

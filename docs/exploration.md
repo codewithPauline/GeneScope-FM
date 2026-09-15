@@ -118,11 +118,12 @@ and [reproducibility notes](https://umap-learn.readthedocs.io/en/latest/reproduc
 
 Existing nonempty output directories require `--overwrite`; only named output
 files are replaced. Inputs cannot occupy one of the output file paths. The summary
-records the input and metadata SHA-256 values, but a CSV alone cannot prove which
-model/checkpoint produced it. Retain the original model ID, checkpoint revision,
-tokenization, pooling, sequence-length handling, and inference settings alongside
-your embeddings. The current generic Hugging Face adapter remains experimental;
-real checkpoint integration and provenance-aware inference are the next milestone.
+records input and metadata SHA-256 values. When an adjacent `.csv.provenance.json`
+sidecar exists, its CSV hash must match before its generation settings are included
+in the report. This detects mismatched files, not falsified claims. Both model and
+k-mer CLI exports write versioned sidecars; external CSV-only inputs remain supported.
+See the [inference guide](inference.md) for the checkpoint, pooling, length policy,
+and the updated provenance schema.
 
 ## Python API
 

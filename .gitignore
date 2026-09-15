@@ -11,3 +11,4 @@ build/
 !examples/synthetic/*.csv
 !docs/demo/*.csv
 .DS_Store
+checkpoint_validation/

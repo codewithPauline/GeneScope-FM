@@ -1,111 +1,54 @@
-"""Validated adapter for the Nucleotide Transformer v2 family."""
+"""Pinned Nucleotide Transformer v2 50M adapter."""
 
-from __future__ import annotations
+import re
 
-import numpy as np
+from .hf import HuggingFaceSequenceModel
 
-from .base import SequenceModel
+MODEL_ID = "InstaDeepAI/nucleotide-transformer-v2-50m-multi-species"
+REVISION = "81b29e5786726d891dbf929404ef20adca5b36f1"
 
 
-class NucleotideTransformerSequenceModel(SequenceModel):
-    """Sequence embedding adapter for InstaDeep Nucleotide Transformer v2.
+class NucleotideTransformerSequenceModel(HuggingFaceSequenceModel):
+    """Use the checkpoint's custom masked-LM architecture, never a generic ESM encoder.
 
-    The adapter follows the checkpoint model card: it loads the masked-language-model
-    architecture with ``trust_remote_code=True``, requests hidden states, constructs the
-    attention mask from the tokenizer pad token, and mean-pools the final hidden layer.
-
-    ``max_length`` is measured in tokenizer tokens, not nucleotide bases. The v2 50M
-    multi-species checkpoint uses a 6-mer tokenizer when possible.
+    The 1,000-token cap follows the documented training context rather than the
+    tokenizer's larger 2,048-token setting. Includes the leading CLS token.
     """
 
     def __init__(
         self,
-        name: str,
-        model_id: str,
+        name: str = "nucleotide-transformer",
+        model_id: str = MODEL_ID,
         *,
-        batch_size: int = 8,
-        max_length: int | None = None,
-        device: str | None = None,
-        revision: str | None = None,
-    ) -> None:
-        try:
-            import torch
-            from transformers import AutoModelForMaskedLM, AutoTokenizer
-        except ImportError as exc:  # pragma: no cover - only when AI extra is absent
-            raise ImportError(
-                "Nucleotide Transformer inference requires the optional AI dependencies. "
-                "Install them with: pip install -e '.[ai]'"
-            ) from exc
-
-        self.name = name
-        self.model_id = model_id
-        self.batch_size = batch_size
-        self.revision = revision
-        self._torch = torch
-        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
-
-        load_kwargs = {"trust_remote_code": True}
-        if revision is not None:
-            load_kwargs["revision"] = revision
-
-        self.tokenizer = AutoTokenizer.from_pretrained(model_id, **load_kwargs)
-        self.model = AutoModelForMaskedLM.from_pretrained(model_id, **load_kwargs)
-        self.model.to(self.device)
-        self.model.eval()
-
-        tokenizer_limit = int(self.tokenizer.model_max_length)
-        self.max_length = (
-            tokenizer_limit if max_length is None else min(max_length, tokenizer_limit)
-        )
-        if self.max_length < 2:
-            raise ValueError("max_length must be at least 2 tokenizer tokens.")
-
-    def embed(self, sequences: list[str]) -> np.ndarray:
-        """Return one mean-pooled final-layer embedding per sequence."""
-        if not sequences:
-            raise ValueError("At least one sequence is required for embedding.")
-
-        outputs: list[np.ndarray] = []
-        torch = self._torch
-
-        for start in range(0, len(sequences), self.batch_size):
-            batch = sequences[start : start + self.batch_size]
-            encoded = self.tokenizer.batch_encode_plus(
-                batch,
-                return_tensors="pt",
-                padding=True,
-                truncation=True,
-                max_length=self.max_length,
+        revision: str = REVISION,
+        trust_remote_code: bool = False,
+        **kwargs,
+    ):
+        if not trust_remote_code:
+            raise ValueError(
+                "Nucleotide Transformer requires its custom model code. "
+                "Review the pinned checkpoint and explicitly pass "
+                "--allow-remote-code (Python: trust_remote_code=True)."
             )
-            input_ids = encoded["input_ids"].to(self.device)
-            attention_mask = input_ids.ne(self.tokenizer.pad_token_id)
+        if not re.fullmatch(r"[0-9a-f]{40}", revision):
+            raise ValueError("revision must be a full immutable 40-character checkpoint SHA.")
+        if model_id != MODEL_ID:
+            raise ValueError("This adapter is validated only for the registered v2 50M checkpoint.")
+        kwargs.setdefault("max_length", 1000)
+        super().__init__(
+            name=name,
+            model_id=model_id,
+            revision=revision,
+            trust_remote_code=True,
+            masked_lm=True,
+            context_limit=1000,
+            **kwargs,
+        )
 
-            with torch.inference_mode():
-                model_output = self.model(
-                    input_ids,
-                    attention_mask=attention_mask,
-                    encoder_attention_mask=attention_mask,
-                    output_hidden_states=True,
-                )
-                hidden = model_output.hidden_states[-1]
-                expanded_mask = attention_mask.unsqueeze(-1).to(hidden.dtype)
-                summed = (hidden * expanded_mask).sum(dim=1)
-                counts = expanded_mask.sum(dim=1).clamp(min=1)
-                pooled = summed / counts
-
-            outputs.append(pooled.detach().cpu().numpy())
-
-        return np.vstack(outputs)
-
-    def provenance(self) -> dict[str, object]:
-        """Return model settings useful for reproducibility reports."""
+    def provenance(self) -> dict:
         return {
+            **super().provenance(),
             "backend": "nucleotide-transformer-v2",
-            "model_id": self.model_id,
-            "revision": self.revision,
-            "max_length_tokens": self.max_length,
-            "batch_size": self.batch_size,
-            "device": self.device,
-            "pooling": "masked-mean-final-hidden-state",
-            "trust_remote_code": True,
+            "model_license": "CC-BY-NC-SA-4.0",
+            "adapter_context_limit_tokens": 1000,
         }

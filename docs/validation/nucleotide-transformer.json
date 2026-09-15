@@ -1,0 +1,109 @@
+{
+  "status": "passed",
+  "purpose": "checkpoint integration; no biological accuracy claim",
+  "checks": [
+    "real safetensors checkpoint load",
+    "four finite 512-dimensional vectors",
+    "repeat inference",
+    "batch-size and padding invariance",
+    "strict over-length rejection",
+    "explicit truncation equals retained prefix",
+    "content-linked export",
+    "HTML exploration report"
+  ],
+  "repeat_max_absolute_difference": 0.0,
+  "batch_max_absolute_difference": 4.291534423828125e-06,
+  "comparison_tolerances": {
+    "rtol": 0.0001,
+    "atol": 1e-05
+  },
+  "truncation_example": {
+    "row": 1,
+    "original_bases": 360,
+    "original_tokens": 61,
+    "retained_tokens": 8,
+    "pooled_tokens": 7,
+    "truncated": true
+  },
+  "elapsed_seconds_including_loading": 26.906755620000013,
+  "provenance": {
+    "schema_version": 1,
+    "genescope_version": "0.2.1",
+    "csv_sha256": "6826a485246dfbe21e1046c18467fba7086ae70c7aa12fb3b0db0d776f5c8a59",
+    "n_sequences": 4,
+    "n_features": 512,
+    "environment": {
+      "python": "3.12.14",
+      "numpy": "2.3.5",
+      "pandas": "2.2.3"
+    },
+    "generation": {
+      "kind": "foundation_model",
+      "backend": "nucleotide-transformer-v2",
+      "model_id": "InstaDeepAI/nucleotide-transformer-v2-50m-multi-species",
+      "requested_revision": "81b29e5786726d891dbf929404ef20adca5b36f1",
+      "resolved_revision": "81b29e5786726d891dbf929404ef20adca5b36f1",
+      "tokenizer_class": "EsmTokenizer",
+      "model_class": "EsmForMaskedLM",
+      "loader": "AutoModelForMaskedLM",
+      "remote_code_enabled": true,
+      "code_revision": "81b29e5786726d891dbf929404ef20adca5b36f1",
+      "weights_format": "safetensors",
+      "device": "cpu",
+      "model_dtype": "torch.float32",
+      "batch_size": 4,
+      "max_length_tokens_including_special": 128,
+      "length_policy": "error",
+      "pooling": "mean of final-layer attended non-special tokens",
+      "sequence_normalization": "remove whitespace; uppercase; validate A/C/G/T/N",
+      "software": {
+        "torch": "2.6.0+cpu",
+        "transformers": "4.48.3",
+        "tokenizers": "0.21.4",
+        "huggingface-hub": "0.36.2",
+        "safetensors": "0.8.0"
+      },
+      "sequence_stats": [
+        {
+          "row": 1,
+          "original_bases": 12,
+          "original_tokens": 3,
+          "retained_tokens": 3,
+          "pooled_tokens": 2,
+          "truncated": false,
+          "sequence_id": "toy_short"
+        },
+        {
+          "row": 2,
+          "original_bases": 20,
+          "original_tokens": 11,
+          "retained_tokens": 11,
+          "pooled_tokens": 10,
+          "truncated": false,
+          "sequence_id": "toy_ambiguous"
+        },
+        {
+          "row": 3,
+          "original_bases": 120,
+          "original_tokens": 21,
+          "retained_tokens": 21,
+          "pooled_tokens": 20,
+          "truncated": false,
+          "sequence_id": "toy_long"
+        },
+        {
+          "row": 4,
+          "original_bases": 1,
+          "original_tokens": 2,
+          "retained_tokens": 2,
+          "pooled_tokens": 1,
+          "truncated": false,
+          "sequence_id": "toy_single_base"
+        }
+      ],
+      "model_license": "CC-BY-NC-SA-4.0",
+      "adapter_context_limit_tokens": 1000,
+      "input_fasta_sha256": "0611cd54b10468531cb39056ca8292c328f3b80ae402001c6b50f91383ee3fa3"
+    }
+  }
+}

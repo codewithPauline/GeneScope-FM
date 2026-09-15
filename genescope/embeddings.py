@@ -3,14 +3,18 @@
 from __future__ import annotations
 
 import csv
+import json
+import os
 import re
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 
 import numpy as np
 import pandas as pd
 
 from .explore import validate_matrix
 from .io import SequenceRecord
+from .provenance import build_provenance, provenance_path
 
 
 def load_embeddings(path: str | Path) -> pd.DataFrame:
@@ -74,10 +78,38 @@ def save_embeddings(
     records: list[SequenceRecord],
     embeddings: np.ndarray,
     output: str | Path,
+    *,
+    provenance: dict | None = None,
 ) -> Path:
-    """Save embeddings as CSV and return the resolved output path."""
+    """Export CSV, optionally with a content-linked generation sidecar.
+
+    Each file is replaced atomically. A crash between the two replacements can
+    leave a mismatched pair, which load_provenance explicitly rejects.
+    """
 
     output_path = Path(output)
+    frame = embeddings_to_frame(records, embeddings)
+    csv_bytes = frame.to_csv(index=False).encode("utf-8")
+    sidecar = provenance_path(output_path)
+    manifest_bytes = None
+    if provenance is not None:
+        if not isinstance(provenance, dict):
+            raise ValueError("provenance must be a dictionary.")
+        manifest = build_provenance(csv_bytes, (len(frame), frame.shape[1] - 2), provenance)
+        manifest_bytes = (json.dumps(manifest, indent=2, allow_nan=False) + "\n").encode("utf-8")
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    embeddings_to_frame(records, embeddings).to_csv(output_path, index=False)
+    for path, content in [(output_path, csv_bytes), (sidecar, manifest_bytes)]:
+        if content is None:
+            # A new export without provenance must not inherit an old model claim.
+            path.unlink(missing_ok=True)
+            continue
+        temp_path = None
+        try:
+            with NamedTemporaryFile(dir=path.parent, delete=False) as temporary:
+                temp_path = Path(temporary.name)
+                temporary.write(content)
+            os.replace(temp_path, path)
+        finally:
+            if temp_path is not None:
+                temp_path.unlink(missing_ok=True)
     return output_path

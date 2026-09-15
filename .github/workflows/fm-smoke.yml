@@ -13,6 +13,8 @@ jobs:
     env:
       HF_HUB_DISABLE_TELEMETRY: "1"
       TOKENIZERS_PARALLELISM: "false"
+      OMP_NUM_THREADS: "2"
+      MKL_NUM_THREADS: "2"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -22,6 +24,7 @@ jobs:
       - name: Install GeneScope AI dependencies
         run: |
           python -m pip install --upgrade pip
+          pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
           pip install -e ".[ai]"
       - name: Run Nucleotide Transformer embedding smoke test
         run: |
@@ -29,6 +32,7 @@ jobs:
             --model nucleotide-transformer \
             --batch-size 2 \
             --max-length 128 \
+            --allow-remote-code --device cpu \
             --output /tmp/nt_embeddings.csv
           python - <<'PY'
           import json
@@ -40,7 +44,15 @@ jobs:
 
           with open("/tmp/nt_embeddings.csv.provenance.json", encoding="utf-8") as handle:
               provenance = json.load(handle)
-          assert provenance["backend"] == "nucleotide-transformer-v2"
-          assert provenance["pooling"] == "masked-mean-final-hidden-state"
+          assert provenance["generation"]["backend"] == "nucleotide-transformer-v2"
+          assert provenance["generation"]["pooling"] == "mean of final-layer attended non-special tokens"
           print(provenance)
           PY
+      - name: Validate batching, pooling, truncation, export, and reporting
+        run: python examples/validate_checkpoint.py --allow-remote-code --output /tmp/genescope-checkpoint
+      - name: Preserve checkpoint validation results
+        uses: actions/upload-artifact@v4
+        with:
+          name: nucleotide-transformer-validation
+          path: /tmp/genescope-checkpoint
+          retention-days: 30

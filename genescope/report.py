@@ -21,6 +21,7 @@ from .explore import (
     project_umap,
     representation_diagnostics,
 )
+from .provenance import load_provenance
 
 PALETTE = ["#0f766e", "#d97706", "#6366f1", "#db2777", "#2563eb", "#64748b"]
 
@@ -126,6 +127,7 @@ def explore_embeddings(
     if method not in {"pca", "umap"}:
         raise ValueError("Projection method must be pca or umap.")
     frame = load_embeddings(input_path)
+    provenance = load_provenance(input_path)
     ids = frame.sequence_id.tolist()
     features = frame.filter(regex=r"^embedding_\d+$").to_numpy(dtype=float)
     if len(ids) < 2:
@@ -158,6 +160,7 @@ def explore_embeddings(
     summary = {
         "genescope_version": __version__,
         "input_file": input_path.name,
+        "embedding_provenance": provenance,
         "description": description,
         "input_sha256": hashlib.sha256(input_path.read_bytes()).hexdigest(),
         "metadata_sha256": hashlib.sha256(metadata_path.read_bytes()).hexdigest()
@@ -181,7 +184,8 @@ def explore_embeddings(
         "diagnostics": representation_diagnostics(features),
         "interpretation": "Exploratory representation geometry; not proof of biological "
         "function, ancestry, evolutionary distance, or predictive performance. "
-        "The generating model cannot be verified from a CSV alone.",
+        "Generation metadata, when present, is linked to the CSV by its content hash; "
+        "it is self-reported and not independently authenticated.",
     }
     if method == "umap":
         summary["umap"] = {
@@ -194,6 +198,10 @@ def explore_embeddings(
             "version": version("umap-learn"),
         }
     svg = _scatter_svg(coordinates, ids, labels, axes)
+    generation = provenance["generation"] if provenance else {}
+    representation = str(generation.get("kind", "external embeddings; provenance unavailable"))
+    if generation.get("model_id"):
+        representation += " · " + str(generation["model_id"])
     groups = list(dict.fromkeys(labels))
     legend = " ".join(
         f'<span style="--color:{PALETTE[i % len(PALETTE)]}">{escape(label)}</span>'
@@ -224,6 +232,7 @@ th{{background:#f8fafc}} code{{overflow-wrap:anywhere}} a{{color:#0f766e}}
 <p class="muted">{escape(input_path.name)} · {method.upper()} projection ·
 cosine neighbors in the original feature space</p>
 <p>{escape(description or "")}</p>
+<p class="muted">Representation: {escape(representation)}</p>
 <div class="cards"><div class="card"><strong>{len(ids):,}</strong>DNA sequences</div>
 <div class="card"><strong>{features.shape[1]:,}</strong>representation dimensions</div>
 <div class="card"><strong>{sum(ratios):.1%}</strong>variance in {len(ratios)} PCA components</div>

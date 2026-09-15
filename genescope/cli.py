@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import json
+import hashlib
 from pathlib import Path
 
 import typer
@@ -11,6 +11,7 @@ from .baselines import kmer_frequencies
 from .embeddings import save_embeddings
 from .io import read_fasta
 from .models import available_models, get_model
+from .provenance import provenance_path
 from .report import explore_embeddings
 
 app = typer.Typer(
@@ -25,6 +26,7 @@ def models_command() -> None:
 
     for spec in available_models():
         typer.echo(f"{spec.key}\t{spec.display_name}\t{spec.model_id}")
+        typer.echo(f"  revision: {spec.revision}\n  {spec.notes}")
 
 
 @app.command("inspect")
@@ -54,44 +56,47 @@ def embed_command(
         help="CSV output path.",
     ),
     batch_size: int = typer.Option(8, min=1),
-    max_length: int = typer.Option(
-        1000,
-        min=8,
-        help="Maximum tokenizer tokens, not nucleotide bases.",
+    max_length: int = typer.Option(1000, min=2, help="Token budget, including special tokens."),
+    length_policy: str = typer.Option("error", help="error (default) or explicit truncate."),
+    allow_remote_code: bool = typer.Option(
+        False, help="Allow the pinned checkpoint's custom code."
     ),
+    device: str | None = typer.Option(None, help="cpu, cuda, or another supported torch device."),
     revision: str | None = typer.Option(
-        None,
-        help="Optional Hugging Face model revision/commit for reproducible inference.",
+        None, help="Full checkpoint SHA; defaults to registry pin."
     ),
+    local_files_only: bool = typer.Option(False, help="Use only an already cached checkpoint."),
 ) -> None:
     """Generate one foundation-model embedding per FASTA record."""
 
     try:
+        if fasta.resolve() in {output.resolve(), provenance_path(output).resolve()}:
+            raise ValueError("Embedding output cannot overwrite the input FASTA.")
         records = read_fasta(fasta)
+        kwargs = {} if revision is None else {"revision": revision}
         backend = get_model(
             model,
             batch_size=batch_size,
             max_length=max_length,
-            revision=revision,
+            length_policy=length_policy,
+            trust_remote_code=allow_remote_code,
+            device=device,
+            local_files_only=local_files_only,
+            **kwargs,
         )
         matrix = backend.embed([record.sequence for record in records])
-        saved = save_embeddings(records, matrix, output)
-    except (ValueError, OSError, ImportError) as exc:
+        details = backend.provenance()
+        details["input_fasta_sha256"] = hashlib.sha256(fasta.read_bytes()).hexdigest()
+        for record, stats in zip(records, details["sequence_stats"], strict=True):
+            stats["sequence_id"] = record.identifier
+        saved = save_embeddings(records, matrix, output, provenance=details)
+    except (ValueError, OSError, ImportError, RuntimeError) as exc:
         typer.echo(f"Error: {exc}", err=True)
         raise typer.Exit(1) from exc
-
-    provenance = getattr(backend, "provenance", None)
-    if callable(provenance):
-        provenance_path = saved.with_suffix(saved.suffix + ".provenance.json")
-        provenance_path.write_text(
-            json.dumps(provenance(), indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
-        typer.echo(f"Provenance: {provenance_path}")
-
     typer.echo(
         f"Saved {matrix.shape[0]} sequence embeddings ({matrix.shape[1]} dimensions) to {saved}"
     )
+    typer.echo(f"Provenance: {provenance_path(saved)}")
 
 
 @app.command("baseline")
@@ -102,9 +107,22 @@ def baseline_command(
 ) -> None:
     """Export conventional k-mer frequencies (offline; not foundation-model embeddings)."""
     try:
+        if fasta.resolve() in {output.resolve(), provenance_path(output).resolve()}:
+            raise ValueError("Baseline output cannot overwrite the input FASTA.")
         records = read_fasta(fasta)
         matrix = kmer_frequencies([record.sequence for record in records], k)
-        saved = save_embeddings(records, matrix, output)
+        saved = save_embeddings(
+            records,
+            matrix,
+            output,
+            provenance={
+                "kind": "kmer_baseline",
+                "k": k,
+                "strand": "forward (not canonicalized)",
+                "normalization": "valid overlapping windows; N-containing windows excluded",
+                "input_fasta_sha256": hashlib.sha256(fasta.read_bytes()).hexdigest(),
+            },
+        )
     except (ValueError, OSError) as exc:
         typer.echo(f"Error: {exc}", err=True)
         raise typer.Exit(1) from exc

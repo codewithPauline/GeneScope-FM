@@ -12,6 +12,12 @@
   runs.
 - Add registry tests and a manual GitHub Actions smoke workflow for real checkpoint
   inference without forcing large model downloads into routine CI.
+- Pin checkpoint and custom code to an immutable revision; require explicit custom-code opt-in.
+- Exclude special tokens from pooling and handle the null-EOS tokenizer mask edge case.
+- Reject over-length input before inference; allow warned, recorded prefix truncation explicitly.
+- Link versioned provenance to CSV content hashes and carry it into exploration reports.
+- Test actual local encoders and masked-LM inference in routine CI; provide a reproducible
+  real-checkpoint validation script and record its results.
 
 ## 0.2.0
 

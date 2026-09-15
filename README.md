@@ -14,9 +14,9 @@ investigate what a representation captures before building predictions on top of
 The central question: **what biological information is encoded inside a genomic
 foundation model's representation of DNA?**
 
-The current **v0.2 exploration milestone** provides a working analysis workflow,
-an offline baseline, and portable reports. Foundation-model checkpoint validation,
-supervised prediction, attribution, and multi-model benchmarking remain in development.
+The current **v0.2.1 milestone** combines embedding exploration with a pinned
+Nucleotide Transformer adapter, explicit sequence handling, and generation provenance.
+Supervised prediction, attribution, and multi-model benchmarking remain in development.
 
 ![GeneScope analysis preview showing a synthetic DNA k-mer example](docs/assets/explorer-demo.svg)
 
@@ -60,7 +60,7 @@ from GitHub, download the repository and open it locally. See the
 | Reproduce analyses | Input hashes, parameters, dependency versions, and exported tables |
 | Share results | Standalone HTML report with SVG plot and tooltips |
 | Establish a baseline | Normalized, overlapping, strand-specific k-mer frequencies |
-| Generate FM embeddings | Experimental Hugging Face adapter and Nucleotide Transformer registry entry; real checkpoint validation is pending |
+| Generate FM embeddings | Dedicated, revision-pinned Nucleotide Transformer v2 50M adapter with CPU integration checks |
 
 The exploration engine accepts embeddings from any source that follows the CSV
 schema. Metadata labels color the visualization; they never influence the fit.
@@ -79,30 +79,38 @@ UMAP uses an explicit random seed and one worker. The report records its paramet
 and version. Reproducibility across different software versions is not guaranteed.
 PCA results are also exported for comparison.
 
-## Foundation-model inference: experimental
+## Foundation-model inference
 
 ```bash
+pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
 pip install -e ".[ai]"
 genescope models
 genescope inspect examples/sequences.fasta
 ```
 
-The repository contains a generic Hugging Face encoder with masked mean pooling
-and a registry entry for
-`InstaDeepAI/nucleotide-transformer-v2-50m-multi-species`. The intended interface is:
+The dedicated adapter loads
+`InstaDeepAI/nucleotide-transformer-v2-50m-multi-species` at an immutable revision
+and averages final-layer sequence tokens, excluding padding and special tokens:
 
 ```bash
 genescope embed examples/sequences.fasta \
-  --model nucleotide-transformer --output embeddings.csv
+  --model nucleotide-transformer --allow-remote-code --device cpu \
+  --output embeddings.csv
 genescope explore embeddings.csv --output model_report
 ```
 
-**This checkpoint has not yet passed end-to-end inference validation in GeneScope.**
-Model-specific loading, custom-code requirements, special-token pooling, and
-sequence-length handling need dedicated validation before scientific use. The
-current adapter truncates tokenized input at `--max-length` (default 512 tokens,
-not bases). The offline demo does not exercise this adapter. No other foundation
-model is advertised as supported yet.
+The checkpoint requires custom model code, enabled explicitly by `--allow-remote-code`.
+The default limit is 1,000 tokens including CLS. Longer sequences raise an error;
+truncation requires `--length-policy truncate` and is recorded per sequence.
+
+Each export includes a `.csv.provenance.json` sidecar linking the exact CSV to its
+model revision, pooling, sequence handling, and software versions. The explorer
+verifies that link before including provenance in the report.
+
+See the [inference guide and validation evidence](docs/inference.md) for the pinned
+revision, CPU compatibility environment, reproducible integration check, and
+checkpoint license. Integration checks establish that inference works; biological
+prediction accuracy still requires a separate benchmark.
 
 ## Python API
 
@@ -145,7 +153,8 @@ biological accuracy. Details are in the [methods and limitations guide](docs/exp
 | --- | --- |
 | v0.1 · Foundation | FASTA reader, Python API, CLI, registry, experimental HF adapter, CSV export |
 | v0.2 · Explore | PCA, optional UMAP, similarities, neighbors, diagnostics, reports, offline baseline |
-| Next · Validate inference | Checkpoint-specific integration, explicit length handling, pooling checks, model provenance, real-sequence smoke test |
+| v0.2.1 · Inference | Pinned checkpoint, CPU integration checks, explicit truncation, special-token pooling, content-linked provenance |
+| Next · Biological evaluation | A labeled public dataset, sequence-aware splits, and comparisons against k-mer features |
 | v0.3 · Predict | Leakage-aware data splits, downstream classifiers, k-mer comparisons, calibration |
 | v0.4 · Explain | Sequence attribution and perturbation analysis with model-specific validation |
 | v0.5 · Compare | Multi-model benchmarks, runtime and memory measurements, standardized reports |
@@ -163,10 +172,11 @@ pytest
 ```
 
 CI runs the core suite on Python 3.10, 3.11, and 3.12, exercises the offline workflow,
-builds a wheel, and tests the optional UMAP dependency in a separate job. Numerical
+builds a wheel, and tests optional UMAP and local torch/Transformers inference in separate jobs. Numerical
 tests cover known PCA and cosine results, metadata alignment, malformed inputs,
 neighbor ties, reproducibility, and report handling. Model weights are not downloaded
-by the core tests.
+by routine CI. The manual foundation-model smoke workflow downloads the actual
+pinned checkpoint and exports its validation results.
 
 ## Author and license
 
