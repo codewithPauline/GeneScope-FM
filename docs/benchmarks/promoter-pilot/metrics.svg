@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="430" viewBox="0 0 900 430" role="img" aria-labelledby="title desc">
+<title id="title">Held-out binary classification results</title>
+<desc id="desc">Scores on a zero to one axis. Error bars are 95 percent stratified bootstrap intervals.</desc>
+<rect width="900" height="430" rx="16" fill="#f5f8fc"/>
+<g font-family="Arial, sans-serif" fill="#14243a">
+<text x="28" y="38" font-size="24" font-weight="bold">GeneScope-FM · Held-out evaluation</text>
+<text x="28" y="65" font-size="14">200 test sequences · fixed threshold 0.5 · 95% bootstrap intervals</text>
+<path d="M230.0 105V340" stroke="#dbe3ed"/>
+<text x="230.0" y="362" text-anchor="middle" font-size="12">0.0</text>
+<path d="M348.0 105V340" stroke="#dbe3ed"/>
+<text x="348.0" y="362" text-anchor="middle" font-size="12">0.2</text>
+<path d="M466.0 105V340" stroke="#dbe3ed"/>
+<text x="466.0" y="362" text-anchor="middle" font-size="12">0.4</text>
+<path d="M584.0 105V340" stroke="#dbe3ed"/>
+<text x="584.0" y="362" text-anchor="middle" font-size="12">0.6</text>
+<path d="M702.0 105V340" stroke="#dbe3ed"/>
+<text x="702.0" y="362" text-anchor="middle" font-size="12">0.8</text>
+<path d="M820.0 105V340" stroke="#dbe3ed"/>
+<text x="820.0" y="362" text-anchor="middle" font-size="12">1.0</text>
+<text x="28" y="142" font-size="15">GC + length</text>
+<rect x="230" y="122" width="439.55" height="18" rx="3" fill="#0f766e"/>
+<path d="M631.20 127v8m0 -4H704.95m0 -4v8" stroke="#14243a" stroke-width="1.5"/>
+<text x="866" y="136" font-size="13" text-anchor="end">0.745</text>
+<rect x="230" y="150" width="471.17" height="18" rx="3" fill="#3569b4"/>
+<path d="M664.68 155v8m0 -4H733.98m0 -4v8" stroke="#14243a" stroke-width="1.5"/>
+<text x="866" y="164" font-size="13" text-anchor="end">0.799</text>
+<text x="28" y="222" font-size="15">3-mer frequencies</text>
+<rect x="230" y="202" width="454.30" height="18" rx="3" fill="#0f766e"/>
+<path d="M645.95 207v8m0 -4H719.70m0 -4v8" stroke="#14243a" stroke-width="1.5"/>
+<text x="866" y="216" font-size="13" text-anchor="end">0.770</text>
+<rect x="230" y="230" width="506.63" height="18" rx="3" fill="#3569b4"/>
+<path d="M703.12 235v8m0 -4H765.78m0 -4v8" stroke="#14243a" stroke-width="1.5"/>
+<text x="866" y="244" font-size="13" text-anchor="end">0.859</text>
+<text x="28" y="302" font-size="15">Frozen NT embeddings</text>
+<rect x="230" y="282" width="474.95" height="18" rx="3" fill="#0f766e"/>
+<path d="M672.50 287v8m0 -4H737.40m0 -4v8" stroke="#14243a" stroke-width="1.5"/>
+<text x="866" y="296" font-size="13" text-anchor="end">0.805</text>
+<rect x="230" y="310" width="515.13" height="18" rx="3" fill="#3569b4"/>
+<path d="M716.69 315v8m0 -4H772.21m0 -4v8" stroke="#14243a" stroke-width="1.5"/>
+<text x="866" y="324" font-size="13" text-anchor="end">0.873</text>
+<rect x="230" y="390" width="14" height="14" fill="#0f766e"/><text x="251" y="402" font-size="13">Balanced accuracy</text>
+<rect x="440" y="390" width="14" height="14" fill="#3569b4"/><text x="461" y="402" font-size="13">AUROC</text>
+</g></svg>

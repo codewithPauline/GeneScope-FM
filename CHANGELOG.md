@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.0
+
+- Add `genescope benchmark` for frozen embeddings, 3-mers, and GC/length controls.
+- Fit scaling and logistic regression on training rows only; select regularization
+  on validation AUROC; export held-out metrics and paired bootstrap intervals.
+- Reject exact/reverse-complement duplicates, shared exact 50-base windows across
+  splits, and overlapping optional groups. Document remaining homology limitations.
+- Add exact input-sequence hashes to new embedding sidecars and require them when
+  matching benchmark sequences to vectors.
+- Add a checksum-pinned public promoter data preparer and a real NT v2 50M pilot
+  with portable results, predictions, source manifests, and interpretation limits.
+- Add offline regression tests and a dedicated optional-dependency CI job.
+
 ## 0.2.1
 
 - Add a dedicated Nucleotide Transformer v2 adapter instead of routing the checkpoint

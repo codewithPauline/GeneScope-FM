@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import os
 import re
@@ -13,7 +14,7 @@ import numpy as np
 import pandas as pd
 
 from .explore import validate_matrix
-from .io import SequenceRecord
+from .io import SequenceRecord, normalize_sequence
 from .provenance import build_provenance, provenance_path
 
 
@@ -96,6 +97,15 @@ def save_embeddings(
         if not isinstance(provenance, dict):
             raise ValueError("provenance must be a dictionary.")
         manifest = build_provenance(csv_bytes, (len(frame), frame.shape[1] - 2), provenance)
+        manifest["input_sequences"] = [
+            {
+                "sequence_id": record.identifier,
+                "sequence_sha256": hashlib.sha256(
+                    normalize_sequence(record.sequence).encode("ascii")
+                ).hexdigest(),
+            }
+            for record in records
+        ]
         manifest_bytes = (json.dumps(manifest, indent=2, allow_nan=False) + "\n").encode("utf-8")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     for path, content in [(output_path, csv_bytes), (sidecar, manifest_bytes)]:

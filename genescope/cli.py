@@ -170,5 +170,27 @@ def explore_command(
     )
 
 
+@app.command("benchmark")
+def benchmark_command(
+    dataset: Path,
+    embeddings: Path,
+    output: Path = typer.Option(Path("benchmark_report"), "--output", "-o"),
+    seed: int = typer.Option(42, min=0, max=2**32 - 1),
+    description: str = typer.Option(
+        "User-supplied binary sequence dataset.",
+        help="Dataset and sampling context for the report.",
+    ),
+) -> None:
+    """Compare frozen embeddings with GC/length and 3-mers on explicit binary splits."""
+    from .benchmark import run_benchmark
+
+    try:
+        report = run_benchmark(dataset, embeddings, output, seed=seed, description=description)
+    except (ValueError, OSError, ImportError) as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(1) from exc
+    typer.echo(f"Benchmark report: {report}")
+
+
 if __name__ == "__main__":
     app()

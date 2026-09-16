@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "dataset": "katarinagresova/Genomic_Benchmarks_human_nontata_promoters",
+  "revision": "e0003669df0a180c8570ebe091ed91f20fa080ec",
+  "source": "https://github.com/ML-Bioinfo-CEITEC/genomic_benchmarks",
+  "citation": "Gresova et al. (2023), Genomic benchmarks: a collection of datasets for genomic sequence classification. BMC Genomic Data 24, 25.",
+  "label_mapping": {
+    "0": "negative",
+    "1": "positive (non-TATA promoter)"
+  },
+  "files": {
+    "train": {
+      "url": "https://huggingface.co/datasets/katarinagresova/Genomic_Benchmarks_human_nontata_promoters/resolve/e0003669df0a180c8570ebe091ed91f20fa080ec/data/train-00000-of-00001-aeb55728756a44ae.parquet",
+      "sha256": "75e934078d6b880464c6a60f2e5ffd5b894204a11f32aac8c9607adcae625afa",
+      "n": 27097,
+      "class_counts": {
+        "0": 12355,
+        "1": 14742
+      }
+    },
+    "test": {
+      "url": "https://huggingface.co/datasets/katarinagresova/Genomic_Benchmarks_human_nontata_promoters/resolve/e0003669df0a180c8570ebe091ed91f20fa080ec/data/test-00000-of-00001-d7614d9116c62f44.parquet",
+      "sha256": "baac2b635666547c56c6482d6c7dd53def995cdcc4acca367f980c82d15c9f39",
+      "n": 9034,
+      "class_counts": {
+        "0": 4119,
+        "1": 4915
+      }
+    }
+  },
+  "selection": {
+    "seed": 42,
+    "order": "ascending SHA256 of seed:sequence_id; IDs use pinned parquet row indices",
+    "per_class": {
+      "train": 300,
+      "validation": 100,
+      "test": 100
+    },
+    "policy": "Official test retained for testing. All official test sequences exclude matching training rows by canonical full sequence or shared exact 50-base window. Validation sampled before training; its windows exclude matching training candidates. Selected canonical sequences unique. Balanced class quotas fixed before inference.",
+    "exclusions": {
+      "official_train_matching_official_test": 11872,
+      "training_candidates_matching_selected_validation": 232,
+      "eligible_official_training_rows": 15225
+    },
+    "audit": {
+      "duplicate_or_reverse_complement_sequences": 0,
+      "overlap_window_bases": 50,
+      "shared_windows_across_splits": {
+        "train/validation": 0,
+        "train/test": 0,
+        "validation/test": 0
+      },
+      "sequences_without_eligible_overlap_windows": 0,
+      "group_disjoint": null,
+      "approximate_homology_checked": false
+    }
+  },
+  "dataset_csv_sha256": "f417702bf3dfd0d8420e0a2b2a2efe695b1e6ba9fe36021f8c7ba8a0ed452452",
+  "fasta_sha256": "2d20ad0b5a4be8b027d4a6e76086fe18a90fd7aadd7efcfa17c75342493bdb2f",
+  "license_note": "The pinned Hugging Face card supplies no dataset license declaration. Raw source sequences are downloaded by the user and are not redistributed in this repository. The upstream code repository's Apache-2.0 license does not establish a separate dataset license."
+}

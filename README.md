@@ -14,9 +14,10 @@ investigate what a representation captures before building predictions on top of
 The central question: **what biological information is encoded inside a genomic
 foundation model's representation of DNA?**
 
-The current **v0.2.1 milestone** combines embedding exploration with a pinned
-Nucleotide Transformer adapter, explicit sequence handling, and generation provenance.
-Supervised prediction, attribution, and multi-model benchmarking remain in development.
+The current **v0.3 milestone** adds held-out binary benchmarking to embedding
+exploration and pinned Nucleotide Transformer inference. It compares frozen model
+features with conventional controls using explicit splits and sequence-overlap checks.
+Attribution, probability calibration, and multi-model benchmarking remain in development.
 
 ![GeneScope analysis preview showing a synthetic DNA k-mer example](docs/assets/explorer-demo.svg)
 
@@ -61,6 +62,8 @@ from GitHub, download the repository and open it locally. See the
 | Share results | Standalone HTML report with SVG plot and tooltips |
 | Establish a baseline | Normalized, overlapping, strand-specific k-mer frequencies |
 | Generate FM embeddings | Dedicated, revision-pinned Nucleotide Transformer v2 50M adapter with CPU integration checks |
+| Benchmark representations | Training-only scaling, validation-selected logistic regression, held-out metrics, paired bootstrap intervals |
+| Screen sequence overlap | Exact/reverse-complement duplicates, shared 50-base windows, optional disjoint groups |
 
 The exploration engine accepts embeddings from any source that follows the CSV
 schema. Metadata labels color the visualization; they never influence the fit.
@@ -109,8 +112,29 @@ verifies that link before including provenance in the report.
 
 See the [inference guide and validation evidence](docs/inference.md) for the pinned
 revision, CPU compatibility environment, reproducible integration check, and
-checkpoint license. Integration checks establish that inference works; biological
-prediction accuracy still requires a separate benchmark.
+checkpoint license. Integration checks establish that inference works; the separate
+pilot below measures one biological classification task.
+
+## First biological benchmark
+
+A reproducible **human non-TATA promoter pilot** compares frozen NT v2 50M
+embeddings with conventional features on 600 training, 200 validation, and 200
+held-out test sequences, balanced by class.
+
+| Representation | Test balanced accuracy | Test AUROC |
+| --- | ---: | ---: |
+| GC fraction + length | 74.5% | 0.799 |
+| 3-mer frequencies | 77.0% | 0.859 |
+| Frozen Nucleotide Transformer | 80.5% | 0.873 |
+
+The paired 95% intervals for NT's improvement include zero, so this small pilot
+does **not** establish a reliable advantage. The source training pool was screened
+against all original test sequences for exact matches and shared 50-base windows.
+Approximate homology and model pretraining overlap remain possible.
+
+Read the [methods, uncertainty, and reproduction commands](docs/benchmarking.md)
+or inspect the [saved predictions and results](docs/benchmarks/promoter-pilot/).
+This filtered subset is not the full published benchmark or a leaderboard claim.
 
 ## Python API
 
@@ -140,8 +164,8 @@ distances and appropriate controls. This direction complements the general frame
 An attractive projection is not validation. GC content, sequence length, repeats,
 shared ancestry, or leakage may explain visible structure. Cosine similarity is
 neither evolutionary distance nor evidence of shared function. The exploration
-command fits the supplied dataset for visualization; predictive evaluation will
-require separate training and held-out data.
+command fits the supplied dataset for visualization; the benchmark command uses
+separate training, validation, and held-out test data.
 
 Current dense reports support up to 5,000 sequences and have quadratic similarity
 cost. Numerical diagnostics describe the representation; they do not establish
@@ -154,25 +178,25 @@ biological accuracy. Details are in the [methods and limitations guide](docs/exp
 | v0.1 · Foundation | FASTA reader, Python API, CLI, registry, experimental HF adapter, CSV export |
 | v0.2 · Explore | PCA, optional UMAP, similarities, neighbors, diagnostics, reports, offline baseline |
 | v0.2.1 · Inference | Pinned checkpoint, CPU integration checks, explicit truncation, special-token pooling, content-linked provenance |
-| Next · Biological evaluation | A labeled public dataset, sequence-aware splits, and comparisons against k-mer features |
-| v0.3 · Predict | Leakage-aware data splits, downstream classifiers, k-mer comparisons, calibration |
+| v0.3 · Benchmark | Binary linear probes, sequence-overlap screening, conventional controls, uncertainty, public promoter pilot |
+| Next · Stronger biological evaluation | Larger datasets, chromosome/homology groups, multiple split seeds, probability calibration |
 | v0.4 · Explain | Sequence attribution and perturbation analysis with model-specific validation |
 | v0.5 · Compare | Multi-model benchmarks, runtime and memory measurements, standardized reports |
 
-See [CHANGELOG.md](CHANGELOG.md) for implemented changes. The k-mer baseline was
-brought forward to make exploration runnable and establish a future comparison.
+See [CHANGELOG.md](CHANGELOG.md) for implemented changes. The k-mer baseline supports
+both offline exploration and foundation-model evaluation.
 
 ## Development
 
 ```bash
-pip install -e ".[dev,explore]"
+pip install -e ".[dev,explore,benchmark]"
 ruff check genescope tests examples
 ruff format --check genescope tests examples
 pytest
 ```
 
 CI runs the core suite on Python 3.10, 3.11, and 3.12, exercises the offline workflow,
-builds a wheel, and tests optional UMAP and local torch/Transformers inference in separate jobs. Numerical
+builds a wheel, and tests optional UMAP, benchmarking, and local torch/Transformers inference in separate jobs. Numerical
 tests cover known PCA and cosine results, metadata alignment, malformed inputs,
 neighbor ties, reproducibility, and report handling. Model weights are not downloaded
 by routine CI. The manual foundation-model smoke workflow downloads the actual

@@ -46,6 +46,21 @@ jobs:
       - name: Test UMAP with real dependency
         run: pytest tests/test_explore.py -k umap
 
+  benchmark:
+    runs-on: ubuntu-latest
+    env:
+      OMP_NUM_THREADS: "2"
+      MKL_NUM_THREADS: "2"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install benchmark dependencies
+        run: pip install -e ".[dev,benchmark]"
+      - name: Test held-out evaluation and data selection without downloads
+        run: pytest tests/test_benchmark.py tests/test_benchmark_data.py
+
   inference:
     runs-on: ubuntu-latest
     timeout-minutes: 15

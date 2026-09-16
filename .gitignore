@@ -12,3 +12,7 @@ build/
 !docs/demo/*.csv
 .DS_Store
 checkpoint_validation/
+.cache/
+promoter_pilot/
+benchmark_report/
+!docs/benchmarks/promoter-pilot/*.csv

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "genescope-fm"
-version = "0.2.1"
+version = "0.3.0"
 description = "AI-for-biology framework for exploring and benchmarking genomic foundation-model representations."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -37,6 +37,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+benchmark = [
+  "scikit-learn>=1.5,<1.9",
+  "pyarrow>=15,<26",
+]
 explore = [
   "umap-learn>=0.5.6,<0.6",
 ]

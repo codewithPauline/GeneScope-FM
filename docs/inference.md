@@ -79,6 +79,8 @@ Each CLI export writes `embeddings.csv.provenance.json` alongside the CSV. It re
   loader, model dtype, device, token budget, batch size, and pooling rule.
 - The source FASTA SHA-256 and per-sequence original base count, original/retained
   token counts, pooled token count, and truncation flag.
+- From v0.3, an `input_sequences` list links sequence IDs to normalized DNA SHA-256
+  hashes. The benchmark checks these before aligning feature rows with labels.
 
 K-mer CLI exports use the same format with `generation.kind = "kmer_baseline"` and
 their feature settings. The explorer validates the CSV hash before attaching a
@@ -112,5 +114,7 @@ Routine CI runs small local encoder/masked-LM tests without downloading pretrain
 weights. To run the real-checkpoint workflow on GitHub, select **Actions → Foundation
 model smoke test → Run workflow**. Its results are saved as a workflow artifact.
 
-The next scientific milestone is evaluation on a labeled biological dataset with
-sequence-aware train/test splits and the k-mer baseline as a comparator.
+The [first biological pilot](benchmarking.md) evaluates frozen embeddings on a
+labeled promoter dataset alongside GC/length and k-mer controls, with explicit
+splits and sequence-overlap screening. Its methods and limitations are documented
+separately from the inference integration checks.

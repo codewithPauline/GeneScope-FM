@@ -1,0 +1,248 @@
+{
+  "schema_version": 1,
+  "genescope_version": "0.3.0",
+  "description": "Human non-TATA promoter pilot from Genomic Benchmarks: 600 training, 200 validation, and 200 test sequences; each split balanced by class. Frozen Nucleotide Transformer v2 50M compared with conventional features. This filtered subset is not the full published benchmark.",
+  "dataset_sha256": "f417702bf3dfd0d8420e0a2b2a2efe695b1e6ba9fe36021f8c7ba8a0ed452452",
+  "embedding_csv_sha256": "61dfcc51fa32bd6ada367ad3bf78e702253a5fde9342765becf34b57372c9d61",
+  "model_id": "InstaDeepAI/nucleotide-transformer-v2-50m-multi-species",
+  "model_revision": "81b29e5786726d891dbf929404ef20adca5b36f1",
+  "splits": {
+    "train": {
+      "n": 600,
+      "class_counts": {
+        "0": 300,
+        "1": 300
+      }
+    },
+    "validation": {
+      "n": 200,
+      "class_counts": {
+        "0": 100,
+        "1": 100
+      }
+    },
+    "test": {
+      "n": 200,
+      "class_counts": {
+        "0": 100,
+        "1": 100
+      }
+    }
+  },
+  "protocol": {
+    "classifier": "L2 logistic regression; lbfgs; max_iter=2000; tol=1e-6",
+    "preprocessing": "StandardScaler fitted on train only, separately for each representation",
+    "selection": "Maximum validation AUROC; smaller C wins exact ties; no refit",
+    "C_grid": [
+      0.01,
+      0.1,
+      1.0,
+      10.0
+    ],
+    "positive_label": 1,
+    "threshold": 0.5,
+    "bootstrap": {
+      "seed": 42,
+      "repetitions": 1000,
+      "method": "paired class-stratified percentile",
+      "confidence": 0.95
+    }
+  },
+  "audit": {
+    "duplicate_or_reverse_complement_sequences": 0,
+    "overlap_window_bases": 50,
+    "shared_windows_across_splits": {
+      "train/validation": 0,
+      "train/test": 0,
+      "validation/test": 0
+    },
+    "sequences_without_eligible_overlap_windows": 0,
+    "group_disjoint": null,
+    "approximate_homology_checked": false
+  },
+  "representations": {
+    "gc_length": {
+      "n_features": 2,
+      "selected_C": 0.01,
+      "candidates": [
+        {
+          "C": 0.01,
+          "validation_auroc": 0.8177
+        },
+        {
+          "C": 0.1,
+          "validation_auroc": 0.8177
+        },
+        {
+          "C": 1.0,
+          "validation_auroc": 0.8177
+        },
+        {
+          "C": 10.0,
+          "validation_auroc": 0.8177
+        }
+      ],
+      "test": {
+        "balanced_accuracy": 0.745,
+        "auroc": 0.7986000000000001,
+        "average_precision": 0.8284577454917088,
+        "f1": 0.7384615384615385,
+        "mcc": 0.49061365083532366,
+        "brier_score": 0.19365993620633923,
+        "log_loss": 0.5744861978754906,
+        "confusion_matrix": [
+          [
+            77,
+            23
+          ],
+          [
+            28,
+            72
+          ]
+        ]
+      },
+      "test_ci95": {
+        "balanced_accuracy": [
+          0.6799999999999999,
+          0.8049999999999999
+        ],
+        "auroc": [
+          0.736745,
+          0.85420625
+        ]
+      }
+    },
+    "3mer": {
+      "n_features": 64,
+      "selected_C": 0.01,
+      "candidates": [
+        {
+          "C": 0.01,
+          "validation_auroc": 0.8522
+        },
+        {
+          "C": 0.1,
+          "validation_auroc": 0.8386999999999999
+        },
+        {
+          "C": 1.0,
+          "validation_auroc": 0.8306
+        },
+        {
+          "C": 10.0,
+          "validation_auroc": 0.8311
+        }
+      ],
+      "test": {
+        "balanced_accuracy": 0.77,
+        "auroc": 0.8586999999999999,
+        "average_precision": 0.8861464047922567,
+        "f1": 0.7604166666666666,
+        "mcc": 0.5417363388859614,
+        "brier_score": 0.15020866538671712,
+        "log_loss": 0.4555231587228872,
+        "confusion_matrix": [
+          [
+            81,
+            19
+          ],
+          [
+            27,
+            73
+          ]
+        ]
+      },
+      "test_ci95": {
+        "balanced_accuracy": [
+          0.7050000000000001,
+          0.8300000000000001
+        ],
+        "auroc": [
+          0.8019000000000001,
+          0.9081025
+        ]
+      }
+    },
+    "frozen_embeddings": {
+      "n_features": 512,
+      "selected_C": 0.01,
+      "candidates": [
+        {
+          "C": 0.01,
+          "validation_auroc": 0.8570000000000001
+        },
+        {
+          "C": 0.1,
+          "validation_auroc": 0.8564
+        },
+        {
+          "C": 1.0,
+          "validation_auroc": 0.8466
+        },
+        {
+          "C": 10.0,
+          "validation_auroc": 0.8403999999999999
+        }
+      ],
+      "test": {
+        "balanced_accuracy": 0.8049999999999999,
+        "auroc": 0.8731000000000001,
+        "average_precision": 0.879670403009651,
+        "f1": 0.8097560975609757,
+        "mcc": 0.6107639326725458,
+        "brier_score": 0.14311710803391947,
+        "log_loss": 0.4540032216044584,
+        "confusion_matrix": [
+          [
+            78,
+            22
+          ],
+          [
+            17,
+            83
+          ]
+        ]
+      },
+      "test_ci95": {
+        "balanced_accuracy": [
+          0.75,
+          0.86
+        ],
+        "auroc": [
+          0.8248924999999999,
+          0.9190024999999999
+        ]
+      }
+    }
+  },
+  "frozen_minus_3mer": {
+    "balanced_accuracy": {
+      "difference": 0.03499999999999992,
+      "ci95": [
+        -0.030000000000000027,
+        0.09999999999999998
+      ]
+    },
+    "auroc": {
+      "difference": 0.01440000000000019,
+      "ci95": [
+        -0.028617500000000066,
+        0.06562249999999997
+      ]
+    }
+  },
+  "limitations": [
+    "Exact/reverse-complement duplicates and shared exact 50-base windows are screened. This does not exclude approximate homology or genomic interval overlap.",
+    "Absent chromosome/locus groups, this is not a chromosome-held-out evaluation.",
+    "Foundation-model pretraining overlap with these genomes is not ruled out.",
+    "Bootstrap intervals condition on this fitted model and test class counts, assume independent sequences, and exclude training, split-selection, and pretraining uncertainty.",
+    "Brier score and log loss describe probabilities; no probability calibration is fitted."
+  ],
+  "environment": {
+    "scikit-learn": "1.8.0",
+    "numpy": "2.3.5",
+    "pandas": "2.2.3",
+    "python": "3.12.14",
+    "scipy": "1.17.0"
+  }
+}

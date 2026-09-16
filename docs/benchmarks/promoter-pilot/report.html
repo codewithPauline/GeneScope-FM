@@ -1,0 +1,98 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GeneScope-FM benchmark</title><style>body{font:16px/1.6 system-ui,sans-serif;max-width:1000px;margin:40px auto;padding:0 24px;color:#14243a}svg{width:100%;height:auto}table{border-collapse:collapse;width:100%}th,td{padding:12px;border-bottom:1px solid #ddd;text-align:left}pre{white-space:pre-wrap;overflow-wrap:anywhere}a{color:#0f766e}</style><h1>GeneScope-FM · Binary benchmark</h1><p>Human non-TATA promoter pilot from Genomic Benchmarks: 600 training, 200 validation, and 200 test sequences; each split balanced by class. Frozen Nucleotide Transformer v2 50M compared with conventional features. This filtered subset is not the full published benchmark.</p><p>Identical sequence splits, frozen features, and a shared logistic-regression protocol. C is selected by validation AUROC; the test set is evaluated after selection.</p><svg xmlns="http://www.w3.org/2000/svg" width="900" height="430" viewBox="0 0 900 430" role="img" aria-labelledby="title desc">
+<title id="title">Held-out binary classification results</title>
+<desc id="desc">Scores on a zero to one axis. Error bars are 95 percent stratified bootstrap intervals.</desc>
+<rect width="900" height="430" rx="16" fill="#f5f8fc"/>
+<g font-family="Arial, sans-serif" fill="#14243a">
+<text x="28" y="38" font-size="24" font-weight="bold">GeneScope-FM · Held-out evaluation</text>
+<text x="28" y="65" font-size="14">200 test sequences · fixed threshold 0.5 · 95% bootstrap intervals</text>
+<path d="M230.0 105V340" stroke="#dbe3ed"/>
+<text x="230.0" y="362" text-anchor="middle" font-size="12">0.0</text>
+<path d="M348.0 105V340" stroke="#dbe3ed"/>
+<text x="348.0" y="362" text-anchor="middle" font-size="12">0.2</text>
+<path d="M466.0 105V340" stroke="#dbe3ed"/>
+<text x="466.0" y="362" text-anchor="middle" font-size="12">0.4</text>
+<path d="M584.0 105V340" stroke="#dbe3ed"/>
+<text x="584.0" y="362" text-anchor="middle" font-size="12">0.6</text>
+<path d="M702.0 105V340" stroke="#dbe3ed"/>
+<text x="702.0" y="362" text-anchor="middle" font-size="12">0.8</text>
+<path d="M820.0 105V340" stroke="#dbe3ed"/>
+<text x="820.0" y="362" text-anchor="middle" font-size="12">1.0</text>
+<text x="28" y="142" font-size="15">GC + length</text>
+<rect x="230" y="122" width="439.55" height="18" rx="3" fill="#0f766e"/>
+<path d="M631.20 127v8m0 -4H704.95m0 -4v8" stroke="#14243a" stroke-width="1.5"/>
+<text x="866" y="136" font-size="13" text-anchor="end">0.745</text>
+<rect x="230" y="150" width="471.17" height="18" rx="3" fill="#3569b4"/>
+<path d="M664.68 155v8m0 -4H733.98m0 -4v8" stroke="#14243a" stroke-width="1.5"/>
+<text x="866" y="164" font-size="13" text-anchor="end">0.799</text>
+<text x="28" y="222" font-size="15">3-mer frequencies</text>
+<rect x="230" y="202" width="454.30" height="18" rx="3" fill="#0f766e"/>
+<path d="M645.95 207v8m0 -4H719.70m0 -4v8" stroke="#14243a" stroke-width="1.5"/>
+<text x="866" y="216" font-size="13" text-anchor="end">0.770</text>
+<rect x="230" y="230" width="506.63" height="18" rx="3" fill="#3569b4"/>
+<path d="M703.12 235v8m0 -4H765.78m0 -4v8" stroke="#14243a" stroke-width="1.5"/>
+<text x="866" y="244" font-size="13" text-anchor="end">0.859</text>
+<text x="28" y="302" font-size="15">Frozen NT embeddings</text>
+<rect x="230" y="282" width="474.95" height="18" rx="3" fill="#0f766e"/>
+<path d="M672.50 287v8m0 -4H737.40m0 -4v8" stroke="#14243a" stroke-width="1.5"/>
+<text x="866" y="296" font-size="13" text-anchor="end">0.805</text>
+<rect x="230" y="310" width="515.13" height="18" rx="3" fill="#3569b4"/>
+<path d="M716.69 315v8m0 -4H772.21m0 -4v8" stroke="#14243a" stroke-width="1.5"/>
+<text x="866" y="324" font-size="13" text-anchor="end">0.873</text>
+<rect x="230" y="390" width="14" height="14" fill="#0f766e"/><text x="251" y="402" font-size="13">Balanced accuracy</text>
+<rect x="440" y="390" width="14" height="14" fill="#3569b4"/><text x="461" y="402" font-size="13">AUROC</text>
+</g></svg><div style="overflow-x:auto"><table><tr><th>Representation</th><th>C</th><th>Balanced accuracy</th><th>AUROC</th><th>Average precision</th><th>MCC</th><th>Brier ↓</th></tr><tr><th>gc_length</th><td>0.01</td><td>0.7450</td><td>0.7986</td><td>0.8285</td><td>0.4906</td><td>0.1937</td></tr><tr><th>3mer</th><td>0.01</td><td>0.7700</td><td>0.8587</td><td>0.8861</td><td>0.5417</td><td>0.1502</td></tr><tr><th>frozen_embeddings</th><td>0.01</td><td>0.8050</td><td>0.8731</td><td>0.8797</td><td>0.6108</td><td>0.1431</td></tr></table></div><p>Higher is better except Brier score (lower is better). Scores apply to these test sequences and this sampling protocol.</p><h2>Interpretation limits</h2><ul><li>Exact/reverse-complement duplicates and shared exact 50-base windows are screened. This does not exclude approximate homology or genomic interval overlap.</li><li>Absent chromosome/locus groups, this is not a chromosome-held-out evaluation.</li><li>Foundation-model pretraining overlap with these genomes is not ruled out.</li><li>Bootstrap intervals condition on this fitted model and test class counts, assume independent sequences, and exclude training, split-selection, and pretraining uncertainty.</li><li>Brier score and log loss describe probabilities; no probability calibration is fitted.</li></ul><p>Download <a href="results.json">full results</a>, <a href="predictions.csv">test predictions</a>, <a href="split_manifest.csv">sequence hashes and splits</a>, or <a href="embedding_provenance.json">embedding provenance</a>.</p><details><summary>Protocol and overlap audit</summary><pre>{
+  &quot;protocol&quot;: {
+    &quot;classifier&quot;: &quot;L2 logistic regression; lbfgs; max_iter=2000; tol=1e-6&quot;,
+    &quot;preprocessing&quot;: &quot;StandardScaler fitted on train only, separately for each representation&quot;,
+    &quot;selection&quot;: &quot;Maximum validation AUROC; smaller C wins exact ties; no refit&quot;,
+    &quot;C_grid&quot;: [
+      0.01,
+      0.1,
+      1.0,
+      10.0
+    ],
+    &quot;positive_label&quot;: 1,
+    &quot;threshold&quot;: 0.5,
+    &quot;bootstrap&quot;: {
+      &quot;seed&quot;: 42,
+      &quot;repetitions&quot;: 1000,
+      &quot;method&quot;: &quot;paired class-stratified percentile&quot;,
+      &quot;confidence&quot;: 0.95
+    }
+  },
+  &quot;audit&quot;: {
+    &quot;duplicate_or_reverse_complement_sequences&quot;: 0,
+    &quot;overlap_window_bases&quot;: 50,
+    &quot;shared_windows_across_splits&quot;: {
+      &quot;train/validation&quot;: 0,
+      &quot;train/test&quot;: 0,
+      &quot;validation/test&quot;: 0
+    },
+    &quot;sequences_without_eligible_overlap_windows&quot;: 0,
+    &quot;group_disjoint&quot;: null,
+    &quot;approximate_homology_checked&quot;: false
+  },
+  &quot;splits&quot;: {
+    &quot;train&quot;: {
+      &quot;n&quot;: 600,
+      &quot;class_counts&quot;: {
+        &quot;0&quot;: 300,
+        &quot;1&quot;: 300
+      }
+    },
+    &quot;validation&quot;: {
+      &quot;n&quot;: 200,
+      &quot;class_counts&quot;: {
+        &quot;0&quot;: 100,
+        &quot;1&quot;: 100
+      }
+    },
+    &quot;test&quot;: {
+      &quot;n&quot;: 200,
+      &quot;class_counts&quot;: {
+        &quot;0&quot;: 100,
+        &quot;1&quot;: 100
+      }
+    }
+  }
+}</pre></details></html>
