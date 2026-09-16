@@ -146,7 +146,8 @@ def test_scaler_and_selection_never_use_test_features_or_labels(dataset, tmp_pat
     pytest.importorskip("sklearn")
     frame, _ = dataset
     features = export_vectors(frame, tmp_path / "features.csv")
-    labels, splits = frame.label.to_numpy(), frame.split.to_numpy()
+    # Pandas 3 exposes read-only array views; this test intentionally edits labels.
+    labels, splits = frame.label.to_numpy(copy=True), frame.split.to_numpy()
     fitted, selection = fit_probe(features, labels, splits)
     np.testing.assert_allclose(fitted[0].mean_, features[splits == "train"].mean(axis=0))
     features[splits == "test"] = 1e9
