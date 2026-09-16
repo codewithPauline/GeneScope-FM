@@ -14,9 +14,10 @@ investigate what a representation captures before building predictions on top of
 The central question: **what biological information is encoded inside a genomic
 foundation model's representation of DNA?**
 
-The current **v0.3 milestone** adds held-out binary benchmarking to embedding
-exploration and pinned Nucleotide Transformer inference. It compares frozen model
-features with conventional controls using explicit splits and sequence-overlap checks.
+The current **v0.3.1 milestone** adds reproducible biological group assignments and
+whole-group uncertainty to held-out benchmarking, embedding exploration, and pinned
+Nucleotide Transformer inference. It compares frozen model features with conventional
+controls using explicit splits and sequence-overlap checks.
 Attribution, probability calibration, and multi-model benchmarking remain in development.
 
 ![GeneScope analysis preview showing a synthetic DNA k-mer example](docs/assets/explorer-demo.svg)
@@ -63,6 +64,7 @@ from GitHub, download the repository and open it locally. See the
 | Establish a baseline | Normalized, overlapping, strand-specific k-mer frequencies |
 | Generate FM embeddings | Dedicated, revision-pinned Nucleotide Transformer v2 50M adapter with CPU integration checks |
 | Benchmark representations | Training-only scaling, validation-selected logistic regression, held-out metrics, paired bootstrap intervals |
+| Prepare grouped evaluations | Prespecified chromosome/homology/locus assignments, content-linked split records, whole-group bootstrap, per-group diagnostics |
 | Screen sequence overlap | Exact/reverse-complement duplicates, shared 50-base windows, optional disjoint groups |
 
 The exploration engine accepts embeddings from any source that follows the CSV
@@ -136,6 +138,25 @@ Read the [methods, uncertainty, and reproduction commands](docs/benchmarking.md)
 or inspect the [saved predictions and results](docs/benchmarks/promoter-pilot/).
 This filtered subset is not the full published benchmark or a leaderboard claim.
 
+## Evaluate independent biological groups
+
+`genescope split-groups` applies your prespecified chromosome, homology-cluster, or
+locus assignments. Every group stays within one split; missing assignments and
+cross-split exact sequence overlaps stop the run. The benchmark then resamples
+**whole test groups** for uncertainty and exports per-group diagnostics.
+
+```bash
+genescope split-groups annotated_sequences.csv group_assignments.csv \
+  --group-kind chromosome --group-source "Assembly and annotation version used" \
+  --output grouped_dataset
+```
+
+See the [grouped evaluation guide](docs/grouped-evaluation.md) for the two input
+schemas and a complete offline demonstration. Groups must come from real source
+metadata or a documented clustering method. The public promoter pilot above has
+no chromosome annotations; it remains a sequence-level pilot. This release adds
+the evaluation workflow, **not a new chromosome-held-out biological result**.
+
 ## Python API
 
 ```python
@@ -179,7 +200,8 @@ biological accuracy. Details are in the [methods and limitations guide](docs/exp
 | v0.2 · Explore | PCA, optional UMAP, similarities, neighbors, diagnostics, reports, offline baseline |
 | v0.2.1 · Inference | Pinned checkpoint, CPU integration checks, explicit truncation, special-token pooling, content-linked provenance |
 | v0.3 · Benchmark | Binary linear probes, sequence-overlap screening, conventional controls, uncertainty, public promoter pilot |
-| Next · Stronger biological evaluation | Larger datasets, chromosome/homology groups, multiple split seeds, probability calibration |
+| v0.3.1 · Grouped evaluation | Prespecified biological groups, split provenance, whole-group uncertainty, per-group diagnostics |
+| Next · Stronger biological evidence | Larger annotated datasets, measured chromosome/homology holdouts, multiple prespecified splits, probability calibration |
 | v0.4 · Explain | Sequence attribution and perturbation analysis with model-specific validation |
 | v0.5 · Compare | Multi-model benchmarks, runtime and memory measurements, standardized reports |
 

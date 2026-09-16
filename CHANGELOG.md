@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.1
+
+- Add `genescope split-groups` to apply prespecified chromosome, homology, or locus
+  assignments, retaining every row and rejecting cross-split sequence overlap.
+- Export content-linked split provenance, sequence FASTA, group counts, and class
+  counts. Group annotations remain externally supplied, not independently verified.
+- Use paired whole-group bootstrap intervals whenever groups are supplied; reject
+  insufficient independent class support and report discarded single-class draws.
+- Export per-group test diagnostics; leave undefined single-class metrics blank.
+- Add an offline synthetic grouped demo, CI coverage, and a grouped-evaluation guide.
+- Benchmark results use schema version 2. Ungrouped point estimates and bootstrap
+  calculations are unchanged; the v0.3 promoter pilot remains the measured result.
+
 ## 0.3.0
 
 - Add `genescope benchmark` for frozen embeddings, 3-mers, and GC/length controls.

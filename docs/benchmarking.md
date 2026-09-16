@@ -1,6 +1,6 @@
 # Binary representation benchmarking
 
-GeneScope v0.3 compares frozen embeddings with two conventional controls using the
+GeneScope compares frozen embeddings with two conventional controls using the
 same sequences, splits, scaling rule, classifier, and validation search. The first
 worked example is a **small human non-TATA promoter pilot**, not a leaderboard result.
 
@@ -93,7 +93,8 @@ The HF export has no chromosome or locus fields. Exact-window screening does not
 exclude approximate homology, all interval overlap, or shared evolutionary origin.
 The checkpoint may have encountered these genomes during pretraining. A larger
 evaluation with recovered locus metadata and chromosome/homology groups is the
-next scientific validation step.
+next scientific validation step. The [grouped workflow](grouped-evaluation.md) now
+supports supplied assignments; no such biological result has been measured yet.
 
 The pinned HF card does not declare a dataset license. The upstream code has an
 Apache-2.0 license, which does not establish a separate dataset license. Raw DNA
@@ -117,7 +118,7 @@ weights have their own CC-BY-NC-SA-4.0 license; see the [inference guide](infere
   indices across representations. Export percentile 95% intervals and paired
   NT-minus-3-mer differences for balanced accuracy and AUROC.
 
-Intervals assume independent test sequences, condition on the fitted classifiers
+For this ungrouped pilot, intervals assume independent test sequences, condition on the fitted classifiers
 and class counts, and exclude variation from training, split selection, and model
 pretraining. Balanced sampling does not represent natural promoter prevalence;
 precision and probability metrics apply to this constructed test set. No
@@ -154,3 +155,20 @@ also supplies `source_manifest.json`; the committed pilot includes that file.
 Regression tests exercise overlap rejection, hash mismatches, row alignment,
 test-set isolation, known metrics, deterministic selection, and output protection.
 Routine CI uses small local fixtures and downloads no biological data or weights.
+
+
+## Grouped evaluations in v0.3.1
+
+When `group` is present, uncertainty automatically uses paired **whole-group**
+resampling instead of the sequence bootstrap. Test data must contain at least two
+groups supporting each class. Existing grouped datasets with insufficient support
+now fail explicitly. The group source is recorded through `genescope split-groups`;
+the [grouped evaluation guide](grouped-evaluation.md) explains preparation, per-group
+diagnostics, and the limits of few-group uncertainty. A supplied group name alone
+is not evidence of chromosome or approximate-homology separation.
+
+New benchmark reports use results schema version 2, add group counts and bootstrap
+unit/diagnostics, and include verified split provenance when the adjacent
+`split_provenance.json` exists. Grouped reports also export `group_metrics.csv` and
+include groups in `predictions.csv`. The committed v0.3 promoter results retain their
+original schema and scores.

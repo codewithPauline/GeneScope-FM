@@ -104,8 +104,11 @@ def load_dataset(path: str | Path) -> pd.DataFrame:
         raise ValueError("Labels must be exactly 0 and 1; 1 is the positive class.")
     if set(frame.split) != set(SPLITS):
         raise ValueError("Splits must be exactly train, validation, and test.")
-    if "group" in frame and frame.group.str.strip().eq("").any():
-        raise ValueError("Group values must be nonempty when provided.")
+    if "group" in frame:
+        if frame.group.str.strip().eq("").any():
+            raise ValueError("Group values must be nonempty when provided.")
+        if not frame.group.eq(frame.group.str.strip()).all():
+            raise ValueError("Group values must not have surrounding whitespace.")
     frame["sequence"] = frame.sequence.map(normalize_sequence)
     frame["label"] = frame.label.astype(int)
     for split in SPLITS:
@@ -205,18 +208,78 @@ def binary_metrics(labels: np.ndarray, probability: np.ndarray) -> dict:
     }
 
 
-def bootstrap_metrics(labels, probabilities, *, seed=42, repetitions=1000):
-    """Paired, class-stratified percentile bootstrap on held-out test sequences."""
+def validate_test_groups(labels, groups) -> dict:
+    """Require enough independent test units for a paired group bootstrap."""
+    labels, groups = np.asarray(labels), np.asarray(groups, dtype=str)
+    if labels.ndim != 1 or groups.ndim != 1 or len(labels) != len(groups):
+        raise ValueError("Test groups must be a one-dimensional array aligned with labels.")
+    if any(not group.strip() or group != group.strip() for group in groups):
+        raise ValueError("Test groups must be nonempty with no surrounding whitespace.")
+    counts = {str(c): int(len(np.unique(groups[labels == c]))) for c in (0, 1)}
+    if min(counts.values()) < 2:
+        raise ValueError(
+            "Group bootstrap needs at least two distinct test groups containing each class. "
+            "Add independent held-out groups; do not split a biological group to meet this rule."
+        )
+    return {"test_groups": int(len(np.unique(groups))), "groups_containing_class": counts}
+
+
+def bootstrap_metrics(
+    labels, probabilities, *, seed=42, repetitions=1000, groups=None, return_diagnostics=False
+):
+    """Paired percentile intervals, resampling whole groups when supplied.
+
+    Otherwise use the original class-stratified sequence bootstrap. Group draws
+    retain every member and multiplicity of sampled groups. Single-class draws
+    cannot define AUROC and are discarded, with a bounded retry budget.
+    """
     from sklearn.metrics import roc_auc_score
 
+    if isinstance(repetitions, bool) or not isinstance(repetitions, int) or repetitions < 1:
+        raise ValueError("repetitions must be a positive integer.")
+    labels = np.asarray(labels)
+    if labels.ndim != 1 or set(labels) != {0, 1}:
+        raise ValueError("Bootstrap labels must contain both binary classes.")
+    probabilities = {name: np.asarray(p) for name, p in probabilities.items()}
+    if not {"3mer", "frozen_embeddings"} <= probabilities.keys():
+        raise ValueError("Paired bootstrap needs 3mer and frozen_embeddings probabilities.")
+    for p in probabilities.values():
+        if p.shape != labels.shape or not np.isfinite(p).all() or ((p < 0) | (p > 1)).any():
+            raise ValueError("Probabilities must be finite, in [0, 1], and aligned with labels.")
+    diagnostics = {
+        "method": "paired class-stratified percentile",
+        "unit": "sequence",
+        "repetitions": repetitions,
+        "discarded_single_class_draws": 0,
+    }
+    members = None
+    if groups is not None:
+        diagnostics.update(validate_test_groups(labels, groups))
+        groups = np.asarray(groups, dtype=str)
+        members = [np.flatnonzero(groups == group) for group in np.unique(groups)]
+        diagnostics.update(method="paired whole-group percentile", unit="group")
     rng = np.random.default_rng(seed)
     classes = [np.flatnonzero(labels == label) for label in (0, 1)]
     samples = {
         name: {metric: [] for metric in ("balanced_accuracy", "auroc")} for name in probabilities
     }
-    for _ in range(repetitions):
-        rows = np.concatenate([rng.choice(c, size=len(c), replace=True) for c in classes])
+    accepted, attempted = 0, 0
+    while accepted < repetitions:
+        attempted += 1
+        if attempted > repetitions * 20:
+            raise ValueError(
+                "Insufficient two-class group bootstrap draws; more test groups needed."
+            )
+        if members is None:
+            rows = np.concatenate([rng.choice(c, size=len(c), replace=True) for c in classes])
+        else:
+            selected = rng.integers(0, len(members), size=len(members))
+            rows = np.concatenate([members[i] for i in selected])
         truth = labels[rows]
+        if len(np.unique(truth)) != 2:
+            diagnostics["discarded_single_class_draws"] += 1
+            continue
+        accepted += 1
         for name, probability in probabilities.items():
             p = probability[rows]
             accuracy = np.mean([np.mean((p[truth == c] >= 0.5) == c) for c in (0, 1)])
@@ -233,6 +296,8 @@ def bootstrap_metrics(labels, probabilities, *, seed=42, repetitions=1000):
         ).tolist()
         for key in ("balanced_accuracy", "auroc")
     }
+    if return_diagnostics:
+        return intervals, differences, diagnostics
     return intervals, differences
 
 
@@ -245,14 +310,15 @@ def render_benchmark_svg(results: dict) -> str:
     # Generic external embeddings should not inherit a model-specific label.
     if results["model_id"] != "InstaDeepAI/nucleotide-transformer-v2-50m-multi-species":
         names["frozen_embeddings"] = "Frozen embeddings"
+    unit = results["protocol"]["bootstrap"].get("unit", "sequence")
     svg = [
         '<svg xmlns="http://www.w3.org/2000/svg" width="900" height="430" viewBox="0 0 900 430" role="img" aria-labelledby="title desc">',
         '<title id="title">Held-out binary classification results</title>',
-        '<desc id="desc">Scores on a zero to one axis. Error bars are 95 percent stratified bootstrap intervals.</desc>',
+        '<desc id="desc">Scores on a zero to one axis. Error bars are 95 percent bootstrap intervals; the resampling unit is stated below.</desc>',
         '<rect width="900" height="430" rx="16" fill="#f5f8fc"/>',
         '<g font-family="Arial, sans-serif" fill="#14243a">',
         '<text x="28" y="38" font-size="24" font-weight="bold">GeneScope-FM · Held-out evaluation</text>',
-        f'<text x="28" y="65" font-size="14">{results["splits"]["test"]["n"]} test sequences · fixed threshold 0.5 · 95% bootstrap intervals</text>',
+        f'<text x="28" y="65" font-size="14">{results["splits"]["test"]["n"]} test sequences · threshold 0.5 · 95% {unit} bootstrap intervals</text>',
     ]
     colors = ("#0f766e", "#3569b4")
     for tick in np.linspace(0, 1, 6):
@@ -306,6 +372,12 @@ def run_benchmark(
         raise ValueError("Benchmark output already exists; choose a new directory.")
     frame = load_dataset(dataset)
     audit = audit_splits(frame)
+    from .splits import load_split_provenance
+
+    split_provenance = load_split_provenance(dataset, frame)
+    test_groups = frame.loc[frame.split == "test", "group"].to_numpy() if "group" in frame else None
+    if test_groups is not None:
+        validate_test_groups(frame.loc[frame.split == "test", "label"].to_numpy(), test_groups)
     matrix, provenance = align_embeddings(frame, embeddings)
     sequences = frame.sequence.tolist()
     gc_length = np.array(
@@ -328,11 +400,31 @@ def run_benchmark(
             **selection,
             "test": binary_metrics(labels[test], probability),
         }
-    intervals, differences = bootstrap_metrics(labels[test], probabilities, seed=seed)
+    intervals, differences, bootstrap = bootstrap_metrics(
+        labels[test], probabilities, seed=seed, groups=test_groups, return_diagnostics=True
+    )
+    limitations = list(LIMITATIONS)
+    if test_groups is not None:
+        limitations[1] = (
+            "Supplied groups are disjoint across splits; their biological annotations and "
+            "independence are not verified by GeneScope. Group names alone do not establish "
+            "chromosome or homology isolation."
+        )
+        limitations[3] = (
+            "Whole-group bootstrap intervals assume independent test groups and condition on "
+            "the fitted classifiers. Single-class draws are discarded because AUROC is undefined. "
+            "Intervals exclude training, split-selection, and pretraining uncertainty."
+        )
+        if bootstrap["test_groups"] < 10 or min(bootstrap["groups_containing_class"].values()) < 10:
+            limitations.append(
+                "Fewer than ten independent test groups support at least one class; "
+                "group-bootstrap intervals may be unstable. Additional sequences within "
+                "the same groups do not replace independent groups."
+            )
     for name, values in intervals.items():
         evaluation[name]["test_ci95"] = values
     results = {
-        "schema_version": 1,
+        "schema_version": 2,
         "genescope_version": __version__,
         "description": description,
         "dataset_sha256": hashlib.sha256(Path(dataset).read_bytes()).hexdigest(),
@@ -343,6 +435,9 @@ def run_benchmark(
         "splits": {
             split: {
                 "n": int(sum(splits == split)),
+                "groups": int(frame.loc[frame.split == split, "group"].nunique())
+                if "group" in frame
+                else None,
                 "class_counts": {
                     str(c): int(sum((splits == split) & (labels == c))) for c in (0, 1)
                 },
@@ -358,12 +453,12 @@ def run_benchmark(
             "threshold": 0.5,
             "bootstrap": {
                 "seed": seed,
-                "repetitions": 1000,
-                "method": "paired class-stratified percentile",
+                **bootstrap,
                 "confidence": 0.95,
             },
         },
         "audit": audit,
+        "split_provenance": split_provenance,
         "representations": evaluation,
         "frozen_minus_3mer": {
             metric: {
@@ -373,7 +468,7 @@ def run_benchmark(
             }
             for metric in differences
         },
-        "limitations": LIMITATIONS,
+        "limitations": limitations,
         "environment": {
             "scikit-learn": sklearn.__version__,
             "numpy": np.__version__,
@@ -385,7 +480,32 @@ def run_benchmark(
     manifest = frame.drop(columns="sequence").copy()
     manifest["sequence_length"] = frame.sequence.str.len()
     manifest["sequence_sha256"] = frame.sequence.map(sequence_hash)
-    predictions = frame.loc[test, ["sequence_id", "label"]].copy()
+    prediction_columns = ["sequence_id", "label"] + (["group"] if "group" in frame else [])
+    predictions = frame.loc[test, prediction_columns].copy()
+    group_rows = []
+    if test_groups is not None:
+        for group in sorted(set(test_groups)):
+            mask = test_groups == group
+            truth = labels[test][mask]
+            for name, probability in probabilities.items():
+                p = probability[mask]
+                both_classes = len(np.unique(truth)) == 2
+                metrics = binary_metrics(truth, p) if both_classes else {}
+                group_rows.append(
+                    {
+                        "group": group,
+                        "representation": name,
+                        "n": int(mask.sum()),
+                        "negative": int((truth == 0).sum()),
+                        "positive": int((truth == 1).sum()),
+                        "balanced_accuracy": metrics.get("balanced_accuracy"),
+                        "auroc": metrics.get("auroc"),
+                        "brier_score": float(np.mean((p - truth) ** 2)),
+                        "status": "both_classes"
+                        if both_classes
+                        else "single_class_metrics_undefined",
+                    }
+                )
     for name, probability in probabilities.items():
         predictions[f"{name}_probability"] = probability
         predictions[f"{name}_prediction"] = (probability >= 0.5).astype(int)
@@ -406,12 +526,25 @@ def run_benchmark(
         + escape(description)
         + "</p><p>Identical sequence splits, frozen features, and a shared logistic-regression protocol. "
         "C is selected by validation AUROC; the test set is evaluated after selection.</p>"
+        + (
+            f"<p>Uncertainty resamples <strong>{bootstrap['unit']}s</strong>. "
+            + (f"Held-out groups: {bootstrap['test_groups']}. " if test_groups is not None else "")
+            + "Point estimates pool test sequences; larger groups contribute more sequences.</p>"
+        )
+        + (
+            f"<p>Declared group kind: {escape(split_provenance['group_kind'])}. "
+            f"Source: {escape(split_provenance['group_source'])}. "
+            "Annotations are supplied by the user and are not independently verified.</p>"
+            if split_provenance
+            else ""
+        )
+        + ('<p><a href="group_metrics.csv">Per-group diagnostics</a></p>' if group_rows else "")
         + svg
         + '<div style="overflow-x:auto"><table><tr><th>Representation</th><th>C</th><th>Balanced accuracy</th><th>AUROC</th><th>Average precision</th><th>MCC</th><th>Brier ↓</th></tr>'
         + rows
         + "</table></div><p>Higher is better except Brier score (lower is better). "
         "Scores apply to these test sequences and this sampling protocol.</p><h2>Interpretation limits</h2><ul>"
-        + "".join(f"<li>{escape(item)}</li>" for item in LIMITATIONS)
+        + "".join(f"<li>{escape(item)}</li>" for item in limitations)
         + '</ul><p>Download <a href="results.json">full results</a>, <a href="predictions.csv">test predictions</a>, '
         '<a href="split_manifest.csv">sequence hashes and splits</a>, or <a href="embedding_provenance.json">embedding provenance</a>.</p>'
         "<details><summary>Protocol and overlap audit</summary><pre>"
@@ -435,6 +568,12 @@ def run_benchmark(
         )
         manifest.to_csv(staging / "split_manifest.csv", index=False)
         predictions.to_csv(staging / "predictions.csv", index=False)
+        if group_rows:
+            pd.DataFrame(group_rows).to_csv(staging / "group_metrics.csv", index=False)
+        if split_provenance:
+            (staging / "split_provenance.json").write_text(
+                json.dumps(split_provenance, indent=2, allow_nan=False) + "\n", encoding="utf-8"
+            )
         (staging / "metrics.svg").write_text(svg, encoding="utf-8")
         (staging / "report.html").write_text(page, encoding="utf-8")
         staging.rename(output)

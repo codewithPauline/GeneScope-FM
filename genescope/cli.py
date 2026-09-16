@@ -170,6 +170,32 @@ def explore_command(
     )
 
 
+@app.command("split-groups")
+def split_groups_command(
+    dataset: Path,
+    assignments: Path,
+    group_kind: str = typer.Option(..., help="chromosome, homology, locus, or other."),
+    group_source: str = typer.Option(
+        ..., help="Assembly/annotation or clustering method and version."
+    ),
+    output: Path = typer.Option(Path("grouped_dataset"), "--output", "-o"),
+) -> None:
+    """Prepare benchmark CSV/FASTA from a prespecified biological group assignment."""
+    from .splits import prepare_group_splits
+
+    try:
+        path = prepare_group_splits(
+            dataset, assignments, output, group_kind=group_kind, group_source=group_source
+        )
+    except (ValueError, OSError) as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(1) from exc
+    typer.echo(f"Prepared grouped dataset: {path}")
+    typer.echo(
+        "Saved sequences.fasta and split_provenance.json; group annotations are user-supplied."
+    )
+
+
 @app.command("benchmark")
 def benchmark_command(
     dataset: Path,

@@ -59,7 +59,19 @@ jobs:
       - name: Install benchmark dependencies
         run: pip install -e ".[dev,benchmark]"
       - name: Test held-out evaluation and data selection without downloads
-        run: pytest tests/test_benchmark.py tests/test_benchmark_data.py
+        run: pytest tests/test_benchmark.py tests/test_benchmark_data.py tests/test_group_splits.py
+
+      - name: Run synthetic grouped evaluation end to end
+        run: |
+          python examples/prepare_grouped_demo.py --output /tmp/genescope-grouped
+          genescope baseline /tmp/genescope-grouped/sequences.fasta --output /tmp/genescope-grouped/vectors.csv
+          genescope benchmark /tmp/genescope-grouped/dataset.csv /tmp/genescope-grouped/vectors.csv --output /tmp/genescope-grouped/report --description "Synthetic grouped software check; k-mer features, no foundation model."
+      - name: Save synthetic grouped report
+        uses: actions/upload-artifact@v4
+        with:
+          name: synthetic-grouped-report
+          path: /tmp/genescope-grouped/report
+          retention-days: 14
 
   inference:
     runs-on: ubuntu-latest
